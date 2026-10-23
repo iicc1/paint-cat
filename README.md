@@ -78,7 +78,9 @@ There is also a **Dev Container** configuration (`.devcontainer/`) for VS Code.
   (`WebApplication`) and `noscript` content in the three languages.
 - `public/og-image.png` (1200×630) is the preview shown when the link is shared. `scripts/og/README.md` explains how to
   regenerate it.
-- `robots.txt` and `sitemap.xml` are generated at build time for `https://paint.cat`.
+- `robots.txt` and `sitemap.xml` are generated at build time for `https://paint.cat`. `robots.txt` allows every
+  crawler and declares `Content-Signal: search=yes, ai-input=yes, ai-train=yes`.
+- `public/llms.txt` summarizes the app for AI assistants ([llmstxt.org](https://llmstxt.org)).
 - The PWA manifest declares icons, screenshots and `file_handlers` (open pictures with the installed app).
 - HTTP headers (CSP, HSTS, `X-Frame-Options`, `Permissions-Policy`, caching…) are in `public/_headers`.
 

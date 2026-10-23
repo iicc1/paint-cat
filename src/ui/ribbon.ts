@@ -18,6 +18,8 @@ interface Binding {
   cmd: string;
   mode: BindMode;
   input?: HTMLInputElement;
+  /** Element that carries aria-pressed for a toggle (defaults to `el`, which must then be a button). */
+  pressed?: HTMLElement;
 }
 
 export const TAB_KEYTIPS: Record<TabId, string> = { home: 'H', view: 'V', text: 'T', preview: 'P' };
@@ -194,7 +196,8 @@ export class Ribbon {
       }
       if (b.mode === 'toggle') {
         b.el.classList.toggle('is-checked', checked);
-        b.el.setAttribute('aria-pressed', String(checked));
+        // Only commands with an on/off state are toggle buttons (Paste in a split button is not).
+        if (cmd.checked) (b.pressed ?? b.el).setAttribute('aria-pressed', String(checked));
       }
     }
   }
@@ -299,8 +302,10 @@ export class Ribbon {
       h('span.rb-label', {}, label ?? plainLabel(c.label)),
       svg(icon('dropdown', 16), 'rb-caret'),
     );
-    const wrap = h('div.rb-split-large', {}, main, drop);
-    this.bind(wrap, cmd, 'toggle');
+    const wrap = h('div.rb-split-large', { role: 'group', 'aria-label': plainLabel(c.label) }, main, drop);
+    // The wrapper shows the checked state; aria-pressed goes on the main button, since a group can't have it.
+    this.bindings.push({ el: wrap, cmd, mode: 'toggle', pressed: main });
+    this.bindTip(wrap, cmd);
     this.bindings.push({ el: main, cmd, mode: 'button' }, { el: drop, cmd, mode: 'button' });
     return wrap;
   }

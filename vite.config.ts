@@ -23,7 +23,8 @@ function seoFiles(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'robots.txt',
-        source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
+        // Content-Signal: search engines and AI may index, cite and train on the site (contentsignals.org).
+        source: `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
       });
       this.emitFile({
         type: 'asset',
