@@ -1,0 +1,19 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+*.log
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+
+# Resources extracted from mspaint.exe, screenshots of the original (© Microsoft) and accessibility dumps (they include
+# details of the machine used for the analysis): local reference only, never committed
+analysis/msaa/
+analysis/resources/
+analysis/screenshots/
+scripts/og/app-capture.png
+
+# Local Claude Code settings
+.claude/

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+      }
+      body {
+        position: relative;
+        background: linear-gradient(135deg, #1f86d6 0%, #1366b5 55%, #0d4f92 100%);
+        color: #fff;
+      }
+      .left {
+        position: absolute;
+        left: 64px;
+        top: 70px;
+        width: 470px;
+      }
+      .logo {
+        width: 104px;
+        height: 104px;
+        background: #fff;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 8px 24px rgb(0 0 0/25%);
+      }
+      .logo svg {
+        width: 82px;
+        height: 82px;
+      }
+      h1 {
+        font-size: 68px;
+        font-weight: 700;
+        margin: 30px 0 6px;
+        letter-spacing: -1px;
+      }
+      p {
+        font-size: 30px;
+        line-height: 1.25;
+        margin: 0 0 30px;
+        color: #e3f0ff;
+      }
+      .pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pill {
+        font-size: 21px;
+        padding: 7px 16px;
+        border-radius: 999px;
+        background: rgb(255 255 255/16%);
+        border: 1px solid rgb(255 255 255/35%);
+      }
+      .shot {
+        position: absolute;
+        left: 560px;
+        top: 78px;
+        width: 760px;
+        height: 475px;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 22px 50px rgb(0 0 0/40%);
+        border: 1px solid rgb(0 0 0/25%);
+        background: #fff;
+      }
+      .shot img {
+        width: 760px;
+        display: block;
+      }
+      .url {
+        position: absolute;
+        left: 64px;
+        bottom: 44px;
+        font-size: 20px;
+        color: #cfe4fb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+          <path
+            d="M15 3C23.5 3 29 8 29 13.6C29 17.4 26.6 18.7 24 18.3C21.3 17.9 19.4 19.3 20 22C20.6 25 19.2 29 14 29C7.4 29 3 23.2 3 16C3 8.8 8.4 3 15 3Z"
+            fill="#F4E2BE"
+            stroke="#A47A44"
+            stroke-width="1.2"
+          />
+          <circle cx="9.2" cy="12.4" r="2.6" fill="#D8382F" />
+          <circle cx="15.4" cy="8.4" r="2.6" fill="#F2B705" />
+          <circle cx="22" cy="10.6" r="2.6" fill="#3C8FD6" />
+          <circle cx="9.4" cy="20.4" r="2.6" fill="#4DAA50" />
+          <path d="M30 30L24.5 24.5" stroke="#A8642E" stroke-width="4" stroke-linecap="round" />
+          <path d="M24.8 24.8L21.6 21.6" stroke="#5B6470" stroke-width="4.6" />
+          <path d="M23.2 19.8L19.8 23.2L14.4 14.4Z" fill="#EE6A2C" stroke="#B9461B" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h1>paint.cat</h1>
+      <p>Classic Paint,<br />right in your browser</p>
+      <div class="pills">
+        <span class="pill">Free</span><span class="pill">No sign-up</span><span class="pill">Works offline</span
+        ><span class="pill">On Mac and Linux too</span>
+      </div>
+    </div>
+    <div class="shot"><img src="app-capture.png" alt="" /></div>
+  </body>
+</html>

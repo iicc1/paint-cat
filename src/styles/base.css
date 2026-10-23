@@ -1,0 +1,376 @@
+/* Colors measured on screenshots of Windows 10 Paint (see analysis/PAINT_SPEC.md). */
+:root {
+  --font: 'Segoe UI', 'Selawik', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --fs: 12px;
+  --text: #262626;
+  --text-disabled: #a6a6a6;
+  --white: #ffffff;
+  --ribbon-bg: #f5f6f7;
+  --ribbon-border: #dadbdc;
+  --group-sep: #e3e4e5;
+  --group-label: #666666;
+  --hover-bg: #e8eff7;
+  --hover-border: #a4cef9;
+  --pressed-bg: #c9e0f7;
+  --pressed-border: #62a2e4;
+  --file-blue: #1979ca;
+  --file-blue-hover: #2a8ad4;
+  --workspace-top: #c5cfdf;
+  --workspace-bottom: #dce5f2;
+  --status-bg: #f0f0f0;
+  --status-sep: #d7d7d7;
+  --menu-bg: #fbfcfd;
+  --menu-border: #c5c5c5;
+  --menu-hover: #edf4fc;
+  --menu-hover-border: #a8d2fd;
+  --menu-sep: #dcddde;
+  --dialog-bg: #f0f0f0;
+  --accent: #0078d7;
+  --contextual: #c8efb4;
+  --contextual-line: #8fd16d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font: var(--fs) / 1.3 var(--font);
+  color: var(--text);
+  background: var(--ribbon-bg);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: default;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--white);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.noscript {
+  max-width: 640px;
+  margin: 40px auto;
+  padding: 0 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  display: block;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------------ title bar and QAT */
+
+.titlebar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  background: var(--white);
+  gap: 2px;
+}
+
+.titlebar-icon {
+  margin-right: 6px;
+}
+
+.titlebar-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 7px 0 4px;
+  background: #c8c8c8;
+}
+
+.titlebar.qat-is-below .titlebar-sep {
+  display: none;
+}
+
+.titlebar-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.qat {
+  display: flex;
+  align-items: center;
+}
+
+.qat-btn,
+.qat-customize {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.qat-customize {
+  width: 14px;
+}
+
+.qat-btn:hover:not(:disabled),
+.qat-customize:hover,
+.qat-customize.is-open {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.qat-btn:disabled .icon {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.qat-below {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 26px;
+  padding: 0 6px;
+  background: var(--ribbon-bg);
+  border-bottom: 1px solid var(--ribbon-border);
+}
+
+/* ------------------------------------------------------------------ workspace */
+
+.workarea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: linear-gradient(var(--workspace-top), var(--workspace-bottom));
+}
+
+/* ------------------------------------------------------------------ status bar */
+
+.statusbar {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: 25px;
+  background: var(--status-bg);
+  border-top: 1px solid #e3e3e3;
+  white-space: nowrap;
+}
+
+.sb-pane {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  border-right: 1px solid var(--status-sep);
+  overflow: hidden;
+}
+
+.sb-pos,
+.sb-sel,
+.sb-size,
+.sb-file {
+  width: 161px;
+  flex: none;
+}
+
+.sb-fill {
+  flex: 1;
+}
+
+.statusbar.is-preview .sb-pos,
+.statusbar.is-preview .sb-sel,
+.statusbar.is-preview .sb-zoom > :not(.sb-zoom-text) {
+  visibility: hidden;
+}
+
+.sb-zoom {
+  width: 205px;
+  flex: none;
+  gap: 2px;
+  border-right: none;
+}
+
+.sb-zoom-text {
+  width: 46px;
+  text-align: right;
+  margin-right: 4px;
+}
+
+.sb-zoom-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.sb-zoom-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.sb-slider {
+  --pos: 0.3;
+  width: 100px;
+  height: 22px;
+  margin: 0 2px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.sb-slider::-webkit-slider-runnable-track {
+  height: 22px;
+  background:
+    linear-gradient(#9a9a9a, #9a9a9a) center / 100% 1px no-repeat,
+    linear-gradient(#9a9a9a, #9a9a9a) 30% 50% / 1px 9px no-repeat;
+}
+
+.sb-slider::-moz-range-track {
+  height: 1px;
+  background: #9a9a9a;
+}
+
+.sb-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px;
+  height: 18px;
+  margin-top: 2px;
+  background: #2b7ad3;
+  border: none;
+  border-radius: 1px 1px 4px 4px;
+}
+
+.sb-slider::-moz-range-thumb {
+  width: 9px;
+  height: 18px;
+  background: #2b7ad3;
+  border: none;
+  border-radius: 1px 1px 4px 4px;
+}
+
+.sb-slider:focus-visible {
+  outline: 1px dotted #000;
+}
+
+/* ------------------------------------------------------------------ full screen, notices and printing */
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  background: #000;
+  outline: none;
+}
+
+.fullscreen-canvas {
+  max-width: 100vw;
+  max-height: 100vh;
+  image-rendering: pixelated;
+}
+
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 40px;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  background: #fff;
+  border: 1px solid var(--menu-border);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+}
+
+.toast-close {
+  padding: 2px 6px;
+  background: none;
+  border: none;
+}
+
+.print-root {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #fff;
+    overflow: visible;
+  }
+
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+
+  .print-root {
+    display: block;
+  }
+
+  .print-root .print-page {
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+  }
+
+  .print-root .print-page:last-child {
+    break-after: auto;
+  }
+}
+
+.print-page img {
+  position: absolute;
+  max-width: none;
+}

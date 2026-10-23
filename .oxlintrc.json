@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "rules": {
+    "unicorn/consistent-function-scoping": "off",
+    "no-underscore-dangle": ["warn", { "allow": ["__APP_VERSION__"] }]
+  },
+  "ignorePatterns": ["dist/**", "dev-dist/**", "analysis/**", "public/**"]
+}

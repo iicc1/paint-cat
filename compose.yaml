@@ -1,0 +1,22 @@
+# Development environment: Node 24 LTS inside Docker.
+#   docker compose up            -> installs dependencies (if missing) and starts Vite at http://localhost:5173
+#   docker compose run --rm app npm run check
+services:
+  app:
+    image: node:24-alpine
+    working_dir: /app
+    init: true
+    volumes:
+      - .:/app
+      # node_modules lives in a volume so Linux binaries do not mix with the host system
+      - node_modules:/app/node_modules
+    ports:
+      - '${PORT:-5173}:5173' # vite dev (PORT changes the host port)
+      - '4173:4173' # vite preview
+    environment:
+      # Changes made from Windows/macOS do not trigger inotify events inside the container
+      VITE_USE_POLLING: 'true'
+    command: sh -c "[ -x node_modules/.bin/vite ] || npm ci; npm run dev"
+
+volumes:
+  node_modules:

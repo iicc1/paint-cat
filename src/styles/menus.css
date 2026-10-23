@@ -1,0 +1,472 @@
+/* Drop-down menus, galleries, File menu, tooltips and KeyTips. */
+
+.popup {
+  position: fixed;
+  z-index: 1000;
+  outline: none;
+}
+
+.menu {
+  min-width: 150px;
+  padding: 2px;
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  box-shadow: 2px 2px 4px rgb(0 0 0 / 18%);
+}
+
+.menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-right: 18px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.menu-item.is-active:not(.is-disabled) {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.menu-item.is-disabled {
+  color: var(--text-disabled);
+}
+
+.menu-item.is-disabled .menu-gutter .icon {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.menu-gutter {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  margin-right: 8px;
+  border-right: 1px solid #e2e3e4;
+}
+
+.menu-check {
+  width: 18px;
+  height: 18px;
+  background: var(--pressed-bg);
+  border: 1px solid var(--pressed-border);
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-shortcut {
+  margin-left: 24px;
+  color: #6d6d6d;
+}
+
+.menu-arrow {
+  position: absolute;
+  right: 4px;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 2px 0 2px 36px;
+  background: var(--menu-sep);
+}
+
+.menu-header {
+  margin: 0 -2px 1px;
+  padding: 3px 8px;
+  font-weight: 600;
+  color: #333;
+  background: #eef0f2;
+  border-bottom: 1px solid var(--menu-sep);
+}
+
+.menu-header:not(:first-child) {
+  border-top: 1px solid var(--menu-sep);
+}
+
+u.ak {
+  text-decoration: underline;
+  text-underline-offset: 1px;
+}
+
+.menu-styles .menu-gutter {
+  width: 26px;
+}
+
+.menu-qat .menu-header {
+  font-weight: 600;
+}
+
+/* Galleries */
+.gallery {
+  padding: 1px;
+  background: #fafbfc;
+  border: 1px solid var(--menu-border);
+  box-shadow: 2px 2px 4px rgb(0 0 0 / 18%);
+}
+
+.gallery-brushes {
+  display: grid;
+  grid-template-columns: repeat(4, 43px);
+  grid-auto-rows: 43px;
+  padding: 2px 2px 6px;
+}
+
+.rb-brush {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.rb-brush .icon {
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #c9c9c9;
+}
+
+.rb-brush:hover,
+.rb-brush.is-checked {
+  background: var(--pressed-bg);
+  border-color: var(--pressed-border);
+}
+
+.gallery-shapes {
+  display: grid;
+  grid-template-columns: repeat(7, 21px);
+  grid-auto-rows: 21px;
+  padding: 2px 18px 2px 2px;
+}
+
+.gallery-sizes {
+  display: flex;
+  flex-direction: column;
+  width: 130px;
+  padding: 2px;
+}
+
+.rb-size {
+  display: flex;
+  align-items: center;
+  height: 39px;
+  padding: 0 6px;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.rb-size:hover {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.rb-size.is-checked {
+  background: var(--pressed-bg);
+  border-color: var(--pressed-border);
+}
+
+.size-line {
+  display: block;
+  width: 100%;
+  min-height: 1px;
+  background: #1f3a5f;
+}
+
+.gallery-fonts {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+}
+
+.font-list {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+
+.font-item {
+  display: block;
+  width: 100%;
+  height: 22px;
+  padding: 0 6px;
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.font-item:hover {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.font-item.is-checked {
+  background: var(--pressed-bg);
+}
+
+.font-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 6px;
+  background: #f0f2f4;
+  border: none;
+  border-top: 1px solid var(--menu-sep);
+}
+
+.font-more:hover {
+  background: var(--menu-hover);
+}
+
+.gallery-fontsizes {
+  display: flex;
+  flex-direction: column;
+  width: 44px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.gallery-fontsizes .font-item {
+  font-size: 12px;
+}
+
+/* File menu */
+.filemenu {
+  width: 588px;
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  box-shadow: 3px 3px 6px rgb(0 0 0 / 22%);
+}
+
+.filemenu-head {
+  display: block;
+  height: 24px;
+  min-width: 56px;
+  margin: -1px 0 0 -1px;
+  padding: 0 12px;
+  color: #fff;
+  background: var(--file-blue);
+  border: none;
+}
+
+.filemenu-body {
+  display: flex;
+  border-top: 1px solid var(--menu-sep);
+}
+
+.filemenu-label {
+  white-space: nowrap;
+}
+
+.filemenu-left {
+  width: 262px;
+  flex: none;
+  padding: 1px 1px 18px;
+  background: #fbfcfd;
+  border-right: 1px solid var(--menu-sep);
+}
+
+.filemenu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 43px;
+  padding: 0 6px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.filemenu-item .icon {
+  width: 32px;
+  height: 32px;
+}
+
+.filemenu-split {
+  display: flex;
+}
+
+.filemenu-split .filemenu-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.filemenu-arrow {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-left: none;
+}
+
+.filemenu-item:hover:not(:disabled),
+.filemenu-split.is-sub-open .filemenu-item,
+.filemenu-split:hover .filemenu-item:not(:disabled) {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.filemenu-arrow:hover:not(:disabled),
+.filemenu-split.is-sub-open .filemenu-arrow,
+.filemenu-split:hover .filemenu-arrow:not(:disabled) {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.filemenu-item:disabled,
+.filemenu-arrow:disabled,
+.filemenu-subitem:disabled {
+  color: var(--text-disabled);
+}
+
+.filemenu-item:disabled .icon,
+.filemenu-subitem:disabled .icon {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.filemenu-sep {
+  height: 1px;
+  margin: 1px 4px 1px 46px;
+  background: var(--menu-sep);
+}
+
+.filemenu-right {
+  flex: 1;
+  padding: 0 2px 4px;
+  background: #f6f7f8;
+  min-height: 100%;
+}
+
+.filemenu-right-title {
+  margin: 0 -2px 2px;
+  padding: 6px 8px 5px;
+  font-weight: 600;
+  color: #444;
+  border-bottom: 1px solid var(--menu-sep);
+}
+
+.filemenu-recent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 22px;
+  padding: 0 8px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.filemenu-recent:hover {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.filemenu-recent-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.filemenu-subitem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  padding: 5px 6px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.filemenu-subitem:hover:not(:disabled) {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+.filemenu-subitem .icon {
+  width: 32px;
+  height: 32px;
+}
+
+.filemenu-subtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filemenu-subtitle {
+  font-weight: 600;
+}
+
+.filemenu-subdesc {
+  color: #444;
+  white-space: normal;
+}
+
+/* Rich tooltips */
+.tooltip {
+  position: fixed;
+  z-index: 1500;
+  max-width: 276px;
+  padding: 5px 8px 7px;
+  background: linear-gradient(#fff, #e4ecf7);
+  border: 1px solid #767676;
+  box-shadow: 2px 2px 3px rgb(0 0 0 / 22%);
+  pointer-events: none;
+}
+
+.tooltip-title {
+  font-weight: 600;
+}
+
+.tooltip.has-desc {
+  width: 276px;
+}
+
+.tooltip-desc {
+  margin-top: 6px;
+  padding-left: 8px;
+  white-space: normal;
+}
+
+/* KeyTips */
+.keytips {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  pointer-events: none;
+}
+
+.keytip {
+  position: fixed;
+  transform: translateX(-50%);
+  min-width: 14px;
+  padding: 0 3px;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+  color: #000;
+  background: #fff;
+  border: 1px solid #555;
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 20%);
+}
+
+.keytip.is-dim {
+  opacity: 0.25;
+}
+
+.keytip.is-disabled {
+  color: #9a9a9a;
+}

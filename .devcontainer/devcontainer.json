@@ -1,0 +1,14 @@
+{
+  "name": "paint.cat (Node 24)",
+  "dockerComposeFile": ["../compose.yaml"],
+  "service": "app",
+  "workspaceFolder": "/app",
+  "overrideCommand": true,
+  "postCreateCommand": "npm ci",
+  "forwardPorts": [5173, 4173],
+  "customizations": {
+    "vscode": {
+      "extensions": ["oxc.oxc-vscode", "esbenp.prettier-vscode", "vitest.explorer"]
+    }
+  }
+}

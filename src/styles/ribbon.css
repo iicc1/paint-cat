@@ -1,0 +1,595 @@
+/* Ribbon in the style of Windows 10 Paint (measured at 96 DPI). */
+
+.ribbon {
+  position: relative;
+  flex: none;
+  z-index: 20;
+}
+
+.rb-tabsrow {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 24px;
+  background: var(--white);
+  border-bottom: 1px solid var(--ribbon-border);
+}
+
+.rb-file {
+  height: 24px;
+  min-width: 56px;
+  margin-bottom: -1px;
+  padding: 0 12px;
+  color: #fff;
+  background: var(--file-blue);
+  border: none;
+}
+
+.rb-file:hover,
+.rb-file.is-open {
+  background: var(--file-blue-hover);
+}
+
+.rb-tablist {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.rb-tab {
+  height: 24px;
+  margin: 0 1px -1px;
+  padding: 0 13px;
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+}
+
+.rb-tab:hover:not(.is-active) {
+  color: #000;
+  background: linear-gradient(transparent 0%, #f4f7fb 100%);
+  border-color: #e8ecf1;
+}
+
+.rb-tab.is-active {
+  background: var(--ribbon-bg);
+  border-color: var(--ribbon-border);
+}
+
+.rb-contextual {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  margin-left: 4px;
+  padding: 0 1px;
+  border-bottom: 2px solid var(--contextual-line);
+}
+
+.rb-contextual-title {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  white-space: nowrap;
+  color: #2d5a15;
+  background: var(--contextual);
+  pointer-events: none;
+}
+
+.rb-tab.is-contextual {
+  min-width: 128px;
+  margin-bottom: -2px;
+}
+
+.rb-tab.is-contextual.is-active {
+  border-color: var(--contextual-line);
+  border-bottom: 2px solid var(--ribbon-bg);
+}
+
+.rb-tabsrow-spacer {
+  flex: 1;
+}
+
+.rb-minimize,
+.rb-help {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.rb-minimize:hover,
+.rb-help:hover {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+/* Language picker: next to Minimize and Help, with each language name written in that language. */
+.rb-language {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+  height: 22px;
+  margin-right: 4px;
+  padding: 0 1px 0 4px;
+  white-space: nowrap;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.rb-language:hover,
+.rb-language.is-open {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+/* ------------------------------------------------------------------ body */
+
+.rb-body {
+  position: relative;
+  height: 93px;
+  background: var(--ribbon-bg);
+  border-bottom: 1px solid var(--ribbon-border);
+}
+
+.rb-body.is-minimized {
+  display: none;
+}
+
+.rb-body.is-minimized.is-popup {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  box-shadow: 0 3px 6px rgb(0 0 0 / 22%);
+}
+
+.rb-panel {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  padding: 2px 2px 0;
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.rb-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.rb-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  padding: 0 3px;
+}
+
+.rb-group::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 2px;
+  bottom: 4px;
+  width: 1px;
+  background: linear-gradient(transparent, var(--group-sep) 15%, var(--group-sep) 85%, transparent);
+}
+
+.rb-group-body {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 1px;
+  padding-right: 2px;
+}
+
+.rb-group-label {
+  height: 15px;
+  padding-bottom: 2px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--group-label);
+}
+
+.rb-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 1px;
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+.rb-large,
+.rb-small,
+.rb-split-main,
+.rb-split-drop,
+.rb-check {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.rb-large {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 42px;
+  height: 66px;
+  padding: 2px 3px 0;
+}
+
+.rb-large .icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
+}
+
+.rb-label {
+  white-space: pre-line;
+  text-align: center;
+  line-height: 14px;
+}
+
+.rb-small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 5px 0 3px;
+}
+
+.rb-small .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.rb-iconbtn {
+  width: 24px;
+  justify-content: center;
+  padding: 0;
+}
+
+.rb-caret {
+  margin-left: -3px;
+}
+
+.rb-largedrop .rb-caret {
+  margin: -2px 0 0;
+}
+
+.rb-large:hover:not(:disabled),
+.rb-small:hover:not(:disabled),
+.rb-check:hover:not(.is-disabled) {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.rb-large:active:not(:disabled),
+.rb-small:active:not(:disabled),
+.rb-large.is-open,
+.rb-small.is-open,
+.rb-large.is-checked,
+.rb-small.is-checked {
+  background: var(--pressed-bg);
+  border-color: var(--pressed-border);
+}
+
+.rb-large:disabled,
+.rb-small:disabled,
+.rb-check.is-disabled {
+  color: var(--text-disabled);
+}
+
+.rb-large:disabled .icon,
+.rb-small:disabled .icon,
+.rb-split-large.is-disabled .icon {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+/* Large split button (Paste, Select, Brushes) */
+.rb-split-large {
+  display: flex;
+  flex-direction: column;
+  min-width: 46px;
+  height: 66px;
+}
+
+.rb-split-main {
+  display: grid;
+  place-items: center;
+  height: 39px;
+  padding: 0 4px;
+}
+
+.rb-split-main .icon {
+  width: 32px;
+  height: 32px;
+}
+
+.rb-split-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 27px;
+  padding: 0 3px;
+  margin-top: -1px;
+}
+
+.rb-split-large:hover .rb-split-main,
+.rb-split-large:hover .rb-split-drop {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.rb-split-large .rb-split-main:hover,
+.rb-split-large .rb-split-drop:hover {
+  background: #d5e6f8;
+}
+
+.rb-split-large.is-checked .rb-split-main,
+.rb-split-large.is-checked .rb-split-drop,
+.rb-split-large.is-open .rb-split-main,
+.rb-split-large.is-open .rb-split-drop {
+  background: var(--pressed-bg);
+  border-color: var(--pressed-border);
+}
+
+.rb-split-large.is-disabled .rb-split-main {
+  color: var(--text-disabled);
+}
+
+/* Tools (3 × 2 grid) */
+.rb-toolgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 24px);
+  grid-auto-rows: 22px;
+  gap: 8px 1px;
+  margin-top: 8px;
+}
+
+/* Shapes gallery */
+.rb-shapes {
+  display: flex;
+  margin-top: 3px;
+  height: 66px;
+  background: #fafbfc;
+  border: 1px solid #dadbdc;
+}
+
+.rb-shapes-viewport {
+  width: 149px;
+  height: 64px;
+  overflow: hidden;
+  padding: 0 0 0 1px;
+}
+
+.rb-shapes-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 21px);
+  grid-auto-rows: 21px;
+  transition: transform 0.12s;
+}
+
+.rb-shape {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.rb-shape:hover {
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+}
+
+.rb-shape.is-checked {
+  background: var(--pressed-bg);
+  border-color: var(--pressed-border);
+}
+
+.rb-gal-buttons {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #dadbdc;
+}
+
+.rb-gal-btn {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 21px;
+  padding: 0;
+  background: var(--ribbon-bg);
+  border: none;
+  border-bottom: 1px solid #e3e4e5;
+}
+
+.rb-gal-btn:last-child {
+  border-bottom: none;
+}
+
+.rb-gal-btn:hover {
+  background: var(--hover-bg);
+}
+
+.rb-gal-btn .icon svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Colors */
+.rb-color {
+  min-width: 44px;
+}
+
+.rb-swatch-frame {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 2px 0 2px;
+  background: #fff;
+  border: 1px solid #808080;
+}
+
+.rb-swatch-big {
+  width: 26px;
+  height: 26px;
+}
+
+.rb-palette {
+  display: grid;
+  grid-template-columns: repeat(10, 22px);
+  grid-template-rows: repeat(3, 22px);
+  gap: 1px;
+  margin: 2px 2px 0;
+}
+
+.rb-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #a0a0a0;
+  box-shadow: inset 0 0 0 1px #fff;
+}
+
+.rb-swatch:hover {
+  border-color: #3c7fb1;
+  box-shadow: inset 0 0 0 1px #e8f2fc;
+}
+
+.rb-swatch.is-empty {
+  background: var(--ribbon-bg);
+  border-color: #d3d5d8;
+  box-shadow: none;
+}
+
+/* Size */
+.rb-largedrop .icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Check boxes (View tab) */
+.rb-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px 0 4px;
+}
+
+.rb-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rb-checkbox {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  background: #fff;
+  border: 1px solid #333;
+}
+
+.rb-check input:checked + .rb-checkbox::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 4px;
+  height: 8px;
+  border: solid #000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.rb-check input:focus-visible + .rb-checkbox {
+  outline: 1px dotted #000;
+  outline-offset: 1px;
+}
+
+/* Text tab */
+.rb-fontgrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.rb-fontrow {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.rb-combo {
+  display: flex;
+  height: 22px;
+  background: #fff;
+  border: 1px solid #abadb3;
+}
+
+.rb-combo:hover,
+.rb-combo:focus-within {
+  border-color: #7eb4ea;
+}
+
+.rb-combo-font {
+  width: 140px;
+}
+
+.rb-combo-size {
+  width: 44px;
+  margin-right: 3px;
+}
+
+.rb-combo-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 3px;
+  border: none;
+  outline: none;
+  background: transparent;
+  user-select: text;
+}
+
+.rb-combo-drop {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-left: 1px solid transparent;
+}
+
+.rb-combo:hover .rb-combo-drop,
+.rb-combo.is-open .rb-combo-drop {
+  background: var(--hover-bg);
+  border-left-color: #7eb4ea;
+}
+
+.rb-combo-drop .icon svg {
+  width: 10px;
+  height: 10px;
+}
