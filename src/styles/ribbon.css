@@ -162,7 +162,21 @@
   height: 100%;
   padding: 2px 2px 0;
   overflow: auto hidden;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
+}
+
+/* When even the collapsed groups don't fit, the edge with more ribbon fades out. */
+.rb-panel.has-more-right {
+  mask-image: linear-gradient(to left, transparent, #000 32px);
+}
+
+.rb-panel.has-more-left {
+  mask-image: linear-gradient(to right, transparent, #000 32px);
+}
+
+.rb-panel.has-more-left.has-more-right {
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
 
 .rb-panel::-webkit-scrollbar {
@@ -592,4 +606,222 @@
 .rb-combo-drop .icon svg {
   width: 10px;
   height: 10px;
+}
+
+/* ------------------------------------------------------------------ narrow window (and phones) */
+
+/* Collapsed group: a button with the group's name that opens it in a popup (see Ribbon.fit). */
+.rb-groupbtn {
+  display: none;
+}
+
+.rb-group.is-collapsed > .rb-groupbtn {
+  display: flex;
+  flex: 1;
+  height: auto;
+  margin-bottom: 4px;
+  padding-top: 4px;
+}
+
+.rb-group.is-collapsed > .rb-group-body,
+.rb-group.is-collapsed > .rb-group-label {
+  display: none;
+}
+
+/* Compact (phone): those buttons and the big ones of groups without a name show only their icon. */
+.rb-panel.is-compact .rb-groupbtn .rb-label,
+.rb-panel.is-compact > .rb-group:not([data-collapse]) .rb-label {
+  display: none;
+}
+
+.rb-panel.is-compact .rb-groupbtn,
+.rb-panel.is-compact > .rb-group:not([data-collapse]) .rb-large {
+  min-width: 40px;
+}
+
+.rb-grouppop {
+  display: flex;
+  min-height: 94px;
+  max-width: calc(100vw - 4px);
+  padding: 2px 2px 0;
+  background: var(--ribbon-bg);
+  border: 1px solid var(--ribbon-border);
+  box-shadow: 2px 2px 4px rgb(0 0 0 / 18%);
+}
+
+.rb-grouppop > .rb-group {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.rb-grouppop > .rb-group::after {
+  display: none;
+}
+
+/* On a phone a group (Colors) can be wider than the screen: it continues on another row. */
+.rb-grouppop .rb-group-body {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+/* Short window: there is no title bar above the tabs for the contextual group's title. */
+@media (max-height: 500px) {
+  .rb-contextual-title {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .rb-language-name {
+    display: none;
+  }
+
+  .rb-tab {
+    padding: 0 9px;
+  }
+}
+
+/* Touch screen: bigger targets, same layout. */
+@media (pointer: coarse) {
+  .rb-tabsrow,
+  .rb-file,
+  .rb-tab {
+    height: 34px;
+  }
+
+  .rb-contextual-title {
+    height: 38px;
+  }
+
+  .rb-minimize,
+  .rb-help {
+    width: 34px;
+    height: 32px;
+  }
+
+  .rb-language {
+    height: 32px;
+  }
+
+  .rb-body {
+    height: 106px;
+  }
+
+  .rb-grouppop {
+    min-height: 106px;
+  }
+
+  .rb-large,
+  .rb-split-large {
+    height: 78px;
+  }
+
+  .rb-split-main {
+    height: 45px;
+  }
+
+  .rb-split-drop {
+    height: 34px;
+  }
+
+  .rb-small,
+  .rb-check {
+    height: 26px;
+  }
+
+  .rb-iconbtn {
+    width: 30px;
+  }
+
+  .rb-toolgrid {
+    grid-template-columns: repeat(3, 34px);
+    grid-auto-rows: 34px;
+    gap: 6px 2px;
+    margin-top: 2px;
+  }
+
+  .rb-toolgrid .rb-small {
+    height: 34px;
+  }
+
+  .rb-shapes {
+    height: 80px;
+  }
+
+  .rb-shapes-viewport {
+    width: 183px;
+    height: 78px;
+  }
+
+  .rb-shapes-grid {
+    grid-template-columns: repeat(7, 26px);
+    grid-auto-rows: 26px;
+  }
+
+  .rb-shape {
+    width: 26px;
+    height: 26px;
+  }
+
+  .rb-gal-btn {
+    width: 22px;
+    height: 26px;
+  }
+
+  .rb-palette {
+    grid-template-columns: repeat(10, 25px);
+    grid-template-rows: repeat(3, 25px);
+  }
+
+  .rb-swatch {
+    width: 25px;
+    height: 25px;
+  }
+
+  .rb-swatch-frame {
+    width: 34px;
+    height: 34px;
+  }
+
+  .rb-swatch-big {
+    width: 30px;
+    height: 30px;
+  }
+
+  .rb-fontgrid {
+    padding-top: 6px;
+  }
+
+  .rb-combo {
+    height: 30px;
+  }
+
+  .rb-combo-font {
+    width: 160px;
+  }
+
+  .rb-combo-size {
+    width: 56px;
+  }
+
+  /* 16 px: iOS zooms the page into any smaller field when it gets the focus. */
+  .rb-combo-input {
+    font-size: 16px;
+  }
+
+  .rb-combo-drop {
+    width: 22px;
+  }
+
+  .rb-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .rb-check input:checked + .rb-checkbox::after {
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+  }
 }

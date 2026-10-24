@@ -3,9 +3,11 @@ import { formatFromName } from '../io/files';
 import { pageLayout } from '../io/print';
 import { pushCustomColor } from '../ui/dialogs';
 import { hexToRgb, hsl240ToRgb, packRgb, rgbToHex, rgbToHsl240 } from './color';
+import { grabRadius } from '../tools/tool';
 import { bresenham, clip, normRect, union } from './geometry';
+import { hitHandles } from './selection';
 import { initialState } from './state';
-import { nextZoom, ZOOM_LEVELS } from './viewport';
+import { nearestZoomLevel, nextZoom, ZOOM_LEVELS } from './viewport';
 
 describe('color', () => {
   it('converts to Hue/Sat/Lum like the Windows color picker', () => {
@@ -44,6 +46,26 @@ describe('zoom', () => {
     for (let i = 0; i < 4; i++) outs.push(nextZoom(outs[outs.length - 1], -1));
     expect(outs).toEqual([1, 0.5, 0.25, 0.125, 0.125]);
     expect(ZOOM_LEVELS[0]).toBe(0.125);
+  });
+
+  it('places a pinch-zoom value on the nearest level of the slider', () => {
+    expect(ZOOM_LEVELS[nearestZoomLevel(1)]).toBe(1);
+    expect(ZOOM_LEVELS[nearestZoomLevel(1.3)]).toBe(1);
+    expect(ZOOM_LEVELS[nearestZoomLevel(1.6)]).toBe(2);
+    expect(ZOOM_LEVELS[nearestZoomLevel(0.3)]).toBe(0.25);
+    expect(ZOOM_LEVELS[nearestZoomLevel(20)]).toBe(8);
+  });
+});
+
+describe('handles', () => {
+  const r = { x: 10, y: 10, w: 100, h: 50 };
+
+  it('are grabbed from further away with a finger', () => {
+    expect(grabRadius({ touch: false })).toBeLessThan(grabRadius({ touch: true }));
+    expect(hitHandles(r, { x: 122, y: 70 }, grabRadius({ touch: false }))).toBeNull();
+    expect(hitHandles(r, { x: 122, y: 70 }, grabRadius({ touch: true }))).toBe('se');
+    expect(hitHandles(r, { x: 60, y: 8 }, 5)).toBe('n');
+    expect(hitHandles(r, { x: 60, y: 35 }, 16)).toBeNull();
   });
 });
 

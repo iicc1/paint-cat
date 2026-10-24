@@ -1,5 +1,5 @@
 import type { Point, RGB, Rect } from '../paint/types';
-import type { OverlayContext } from '../tools/tool';
+import { grabRadius, type OverlayContext } from '../tools/tool';
 import type { App } from './app';
 import { rgbToCss } from './color';
 import { createCanvas, ctx2d } from './doc';
@@ -234,16 +234,14 @@ export class Selection {
     if (this.floating) this.renderFloating();
   }
 
-  hitHandle(p: Point, zoom: number): Handle | 'inside' | null {
+  hitHandle(p: Point & { touch?: boolean }, zoom: number): Handle | 'inside' | null {
     const r = this.rect;
     if (!r) return null;
-    const tol = 5 / zoom;
-    for (const h of HANDLES) {
-      const c = handlePoint(r, h);
-      if (Math.abs(p.x - c.x) <= tol && Math.abs(p.y - c.y) <= tol) return h;
-    }
+    const handle = hitHandles(r, p, 5 / zoom);
+    if (handle) return handle;
     if (p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h) return 'inside';
-    return null;
+    // A finger grabs handles from further away, but never instead of moving a small selection.
+    return p.touch ? hitHandles(r, p, grabRadius(p) / zoom) : null;
   }
 
   drawOverlay(o: OverlayContext): void {
@@ -325,6 +323,15 @@ export class Selection {
     this.app.store.set({ hasSelection: r !== null, selectionSize: r ? { w: r.w, h: r.h } : null });
     this.app.invalidate();
   }
+}
+
+/** The handle of rectangle `r` within `tol` (image pixels) of `p`, if any. */
+export function hitHandles(r: Rect, p: Point, tol: number): Handle | null {
+  for (const h of HANDLES) {
+    const c = handlePoint(r, h);
+    if (Math.abs(p.x - c.x) <= tol && Math.abs(p.y - c.y) <= tol) return h;
+  }
+  return null;
 }
 
 export function handlePoint(r: Rect, h: Handle): Point {

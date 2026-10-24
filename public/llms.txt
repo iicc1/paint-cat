@@ -1,6 +1,6 @@
 # paint.cat
 
-> paint.cat is a free, open-source web replica of the classic Windows 10 Paint (the ribbon version). It runs entirely in the browser on Windows, macOS and Linux, needs no sign-up or server, works offline and can be installed as an app (PWA). The interface is available in English, Catalan and Spanish.
+> paint.cat is a free, open-source web replica of the classic Windows 10 Paint (the ribbon version). It runs entirely in the browser on Windows, macOS and Linux, and on phones and tablets (touch, pinch-zoom), needs no sign-up or server, works offline and can be installed as an app (PWA). The interface is available in English, Catalan and Spanish.
 
 Use it at https://paint.cat — there is nothing to download or install. Pictures never leave the user's computer.
 

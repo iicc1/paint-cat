@@ -13,9 +13,16 @@ export interface PointerInfo {
   shift: boolean;
   ctrl: boolean;
   alt: boolean;
+  /** A finger: handles are grabbed from further away. */
+  touch: boolean;
   inside: boolean;
   clientX: number;
   clientY: number;
+}
+
+/** How far (view CSS pixels) a handle can be grabbed from: further with a finger than with the mouse. */
+export function grabRadius(p: { touch?: boolean }): number {
+  return p.touch ? 16 : 5;
 }
 
 /** Context for drawing overlays in screen coordinates (view CSS pixels). */

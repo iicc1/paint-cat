@@ -36,10 +36,17 @@
   box-sizing: border-box;
 }
 
+/* No double-tap zoom on touch screens: a quick second tap (Undo, Undo) must be a second click. */
+* {
+  touch-action: manipulation;
+}
+
 html,
 body {
   height: 100%;
   margin: 0;
+  /* No pull-to-refresh on phones: dragging down on the ribbon must not reload the page and lose the drawing. */
+  overscroll-behavior: none;
 }
 
 body {
@@ -50,7 +57,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
+  /* No iOS callout (copy, look up…) when holding a finger on a button. */
+  -webkit-touch-callout: none;
 }
 
 button,
@@ -68,8 +76,10 @@ button {
 .app {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100vh;
   height: 100dvh;
+  overflow: hidden;
   background: var(--white);
 }
 
@@ -230,6 +240,11 @@ button {
   visibility: hidden;
 }
 
+.sb-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sb-zoom {
   width: 205px;
   flex: none;
@@ -303,6 +318,107 @@ button {
   outline: 1px dotted #000;
 }
 
+/* Short window (a phone on its side): the canvas needs the height; the toolbar moves to the tabs row. */
+@media (max-height: 500px) {
+  .titlebar {
+    display: none;
+  }
+
+  .rb-tabsrow > .qat {
+    align-self: center;
+    margin: 0 4px;
+  }
+}
+
+/* Narrow window or phone: panes take only the room they need and the empty ones are hidden. */
+@media (max-width: 760px) {
+  .sb-pos,
+  .sb-sel,
+  .sb-size,
+  .sb-file {
+    width: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .sb-pane {
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  .sb-pane.is-empty,
+  .sb-fill {
+    display: none;
+  }
+
+  .sb-zoom {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .sb-zoom-text {
+    width: auto;
+    min-width: 40px;
+  }
+
+  .sb-slider {
+    width: 72px;
+  }
+}
+
+/* Phone: the + and − buttons (and pinching) are enough; the room goes to the size panes. */
+@media (max-width: 480px) {
+  .sb-slider {
+    display: none;
+  }
+}
+
+/* Touch screen: controls big enough for a finger. */
+@media (pointer: coarse) {
+  .titlebar {
+    height: 38px;
+  }
+
+  .qat-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .qat-customize {
+    width: 22px;
+    height: 34px;
+  }
+
+  .qat-below {
+    height: 38px;
+  }
+
+  .statusbar {
+    height: 32px;
+  }
+
+  .sb-zoom-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sb-slider,
+  .sb-slider::-webkit-slider-runnable-track {
+    height: 30px;
+  }
+
+  .sb-slider::-webkit-slider-thumb {
+    width: 14px;
+    height: 24px;
+    margin-top: 3px;
+  }
+
+  .sb-slider::-moz-range-thumb {
+    width: 14px;
+    height: 24px;
+  }
+}
+
 /* ------------------------------------------------------------------ full screen, notices and printing */
 
 .fullscreen {
@@ -318,6 +434,7 @@ button {
 .fullscreen-canvas {
   max-width: 100vw;
   max-height: 100vh;
+  max-height: 100dvh;
   image-rendering: pixelated;
 }
 
@@ -325,6 +442,7 @@ button {
   position: fixed;
   right: 16px;
   bottom: 40px;
+  max-width: calc(100vw - 32px);
   z-index: 2500;
   display: flex;
   align-items: center;

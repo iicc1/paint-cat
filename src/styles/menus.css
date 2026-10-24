@@ -348,11 +348,58 @@ u.ak {
 }
 
 .filemenu-right-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 -2px 2px;
   padding: 6px 8px 5px;
   font-weight: 600;
   color: #444;
   border-bottom: 1px solid var(--menu-sep);
+}
+
+.filemenu-back {
+  display: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px 0 -4px -4px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  transform: scaleX(-1);
+}
+
+.filemenu-back:hover {
+  background: var(--menu-hover);
+  border-color: var(--menu-hover-border);
+}
+
+/* Narrow screen: the list takes the whole width, recent pictures go below it and a submenu replaces it. */
+@media (max-width: 600px) {
+  .filemenu {
+    width: calc(100vw - 4px);
+    overflow-y: auto;
+  }
+
+  .filemenu-body {
+    flex-direction: column;
+  }
+
+  .filemenu-left {
+    width: auto;
+    padding-bottom: 4px;
+    border-right: none;
+  }
+
+  .filemenu.is-sub .filemenu-left,
+  .filemenu-right.is-empty {
+    display: none;
+  }
+
+  .filemenu-back {
+    display: grid;
+  }
 }
 
 .filemenu-recent {
@@ -469,4 +516,54 @@ u.ak {
 
 .keytip.is-disabled {
   color: #9a9a9a;
+}
+
+/* Touch screen: rows and cells big enough for a finger. */
+@media (pointer: coarse) {
+  .menu-item {
+    height: 36px;
+  }
+
+  .gallery-shapes {
+    grid-template-columns: repeat(7, 32px);
+    grid-auto-rows: 32px;
+  }
+
+  .gallery-shapes .rb-shape {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gallery-brushes {
+    grid-template-columns: repeat(4, 50px);
+    grid-auto-rows: 50px;
+  }
+
+  .rb-size {
+    height: 44px;
+  }
+
+  .font-item {
+    height: 34px;
+  }
+
+  .gallery-fontsizes {
+    width: 56px;
+  }
+
+  .font-more {
+    height: 36px;
+  }
+
+  .filemenu-item {
+    height: 46px;
+  }
+
+  .filemenu-arrow {
+    width: 40px;
+  }
+
+  .filemenu-recent {
+    height: 36px;
+  }
 }

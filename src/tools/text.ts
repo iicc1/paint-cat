@@ -1,14 +1,13 @@
 import type { App } from '../app/app';
 import { rgbToCss, rgbToHex } from '../app/color';
 import { intRect, normRect } from '../app/geometry';
-import { cursorForHandle, drawHandles, handlePoint, resizeByHandle, type Handle } from '../app/selection';
+import { cursorForHandle, drawHandles, hitHandles, resizeByHandle, type Handle } from '../app/selection';
 import type { FontState } from '../app/state';
 import { t } from '../i18n';
 import type { Point, RGB, Rect } from '../paint/types';
-import type { OverlayContext, PointerInfo, Tool } from './tool';
+import { grabRadius, type OverlayContext, type PointerInfo, type Tool } from './tool';
 
 const PT_TO_PX = 96 / 72;
-const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 type Drag =
   | { mode: 'create'; start: Point; current: Point }
@@ -319,11 +318,9 @@ export class TextTool implements Tool {
   private hit(p: PointerInfo): Handle | 'border' | null {
     const box = this.currentBox();
     if (!box) return null;
-    const tol = 5 / this.app.view.zoom;
-    for (const h of HANDLES) {
-      const c = handlePoint(box, h);
-      if (Math.abs(p.x - c.x) <= tol && Math.abs(p.y - c.y) <= tol) return h;
-    }
+    const tol = grabRadius(p) / this.app.view.zoom;
+    const handle = hitHandles(box, p, tol);
+    if (handle) return handle;
     const inOuter =
       p.x >= box.x - tol && p.y >= box.y - tol && p.x <= box.x + box.w + tol && p.y <= box.y + box.h + tol;
     const inInner = p.x > box.x && p.y > box.y && p.x < box.x + box.w && p.y < box.y + box.h;

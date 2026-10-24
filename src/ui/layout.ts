@@ -1,6 +1,6 @@
 import type { App } from '../app/app';
 import { docTitle, type AppState, type QatItem } from '../app/state';
-import { ZOOM_LEVELS } from '../app/viewport';
+import { nearestZoomLevel, ZOOM_LEVELS } from '../app/viewport';
 import { APP_NAME, t } from '../i18n';
 import { ClipboardManager } from '../io/clipboard';
 import { FileManager } from '../io/files';
@@ -110,6 +110,10 @@ export function buildUI(app: App, root: HTMLElement): UI {
   }
   qat.append(qatCustomize);
 
+  // Short window (a phone on its side): no title bar, and the toolbar goes to the tabs row.
+  const short = window.matchMedia('(max-height: 500px)');
+  short.addEventListener('change', () => syncQat(app.store.state));
+
   const syncQat = (st: Readonly<AppState>): void => {
     qatIndex = 1;
     for (const item of QAT_ORDER) {
@@ -119,9 +123,10 @@ export function buildUI(app: App, root: HTMLElement): UI {
       const c = commands[QAT_CMD[item]];
       b.disabled = !(c.enabled?.() ?? true);
     }
-    const parent = st.qatBelow ? qatBar : header;
+    const parent = st.qatBelow ? qatBar : short.matches ? ribbon.tabsRow : header;
     if (qat.parentElement !== parent) {
       if (st.qatBelow) qatBar.append(qat);
+      else if (short.matches) ribbon.tabsRow.insertBefore(qat, ribbon.tabsRow.querySelector('.rb-tabsrow-spacer'));
       else header.insertBefore(qat, header.children[1]);
     }
     qatBar.hidden = !st.qatBelow;
@@ -339,22 +344,28 @@ class StatusBar {
   }
 
   update(changed: ReadonlySet<keyof AppState>, st: Readonly<AppState>): void {
-    if (changed.has('cursor')) this.pos.textContent = st.cursor ? t.status.position(st.cursor.x, st.cursor.y) : '';
+    if (changed.has('cursor')) setPane(this.pos, st.cursor ? t.status.position(st.cursor.x, st.cursor.y) : '');
     if (changed.has('selectionSize'))
-      this.sel.textContent = st.selectionSize ? t.status.size(st.selectionSize.w, st.selectionSize.h) : '';
+      setPane(this.sel, st.selectionSize ? t.status.size(st.selectionSize.w, st.selectionSize.h) : '');
     if (changed.has('docWidth') || changed.has('docHeight'))
       this.size.textContent = t.status.size(st.docWidth, st.docHeight);
     if (changed.has('fileSize'))
-      this.file.textContent = st.fileSize !== null ? t.status.fileSize(formatBytes(st.fileSize)) : '';
+      setPane(this.file, st.fileSize !== null ? t.status.fileSize(formatBytes(st.fileSize)) : '');
     if (changed.has('zoom')) {
       const pct = st.zoom * 100;
-      this.zoomText.textContent = `${Number.isInteger(pct) ? pct : pct.toFixed(2)}%`;
-      const i = ZOOM_LEVELS.findIndex((z) => Math.abs(z - st.zoom) < 1e-9);
-      if (i >= 0) this.slider.value = String(i);
+      // Pinch-zoom gives any value: whole percentages from 20 % on.
+      this.zoomText.textContent = `${Number.isInteger(pct) ? pct : pct < 20 ? pct.toFixed(2) : Math.round(pct)}%`;
+      this.slider.value = String(nearestZoomLevel(st.zoom));
       this.slider.style.setProperty('--pos', String(Number(this.slider.value) / (ZOOM_LEVELS.length - 1)));
     }
     if (changed.has('printPreview')) this.el.classList.toggle('is-preview', st.printPreview);
   }
+}
+
+/** Sets a pane's text; empty panes are hidden when the window is narrow. */
+function setPane(text: HTMLElement, value: string): void {
+  text.textContent = value;
+  text.parentElement?.classList.toggle('is-empty', !value);
 }
 
 // ---------------------------------------------------------------------- print preview

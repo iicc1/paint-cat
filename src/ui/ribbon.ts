@@ -6,7 +6,7 @@ import { contoursToSvgPath, shapeContours } from '../paint/shapes';
 import { BRUSH_ORDER, SHAPE_ORDER, SHAPE_STYLE_ORDER, type ShapeKind } from '../paint/types';
 import type { TextTool } from '../tools/text';
 import { BRUSH_ICONS, applyColor, currentSize, setSize, sizeOptions, type Commands } from './commands';
-import { h, plainLabel, svg } from './dom';
+import { h, placePopup, plainLabel, svg } from './dom';
 import { availableFonts, loadMoreFonts } from './fonts';
 import { icon, type IconName } from './icons';
 import { closeAllPopups, dropMenu, Menu, Popup } from './menu';
@@ -22,7 +22,19 @@ interface Binding {
   pressed?: HTMLElement;
 }
 
+/** A group that, when the ribbon is too narrow, collapses into a button that opens it (lowest `order` first). */
+interface Collapse {
+  order: number;
+  icon: IconName;
+  kt: string;
+}
+
 export const TAB_KEYTIPS: Record<TabId, string> = { home: 'H', view: 'V', text: 'T', preview: 'P' };
+
+/** Ribbon buttons must not steal focus from the text box being edited. */
+function keepFocus(e: PointerEvent): void {
+  if (!(e.target as HTMLElement).closest('input, select')) e.preventDefault();
+}
 
 /** Shape icons generated from the engine's own geometry (blue stroke, as in Paint). */
 export function shapeIcon(kind: ShapeKind): string {
@@ -54,6 +66,8 @@ export class Ribbon {
   private fontInput!: HTMLInputElement;
   private sizeInput!: HTMLInputElement;
   private shapeScroll = 0;
+  private groupPopup: Popup | null = null;
+  private readonly resizeObserver = new ResizeObserver(() => this.fit());
   private readonly unsubscribe: (() => void)[] = [];
 
   constructor(
@@ -131,17 +145,27 @@ export class Ribbon {
     for (const [id, p] of this.panels) {
       p.dataset.tab = id;
       this.body.append(p);
+      // If the groups still don't fit, the panel scrolls sideways (finger, or the mouse wheel).
+      p.addEventListener('scroll', () => this.updateScrollHint(p), { passive: true });
+      p.addEventListener(
+        'wheel',
+        (e) => {
+          if (e.ctrlKey || e.deltaX || p.scrollWidth <= p.clientWidth) return;
+          e.preventDefault();
+          p.scrollLeft += e.deltaY;
+        },
+        { passive: false },
+      );
     }
-    // Ribbon buttons must not steal focus from the text box being edited.
-    this.body.addEventListener('pointerdown', (e) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('input, select')) e.preventDefault();
-    });
+    this.body.addEventListener('pointerdown', keepFocus);
+    this.resizeObserver.observe(this.body);
+    void document.fonts?.ready.then(() => this.fit());
   }
 
   /** Releases state subscriptions (a new ribbon is created when the language changes). */
   destroy(): void {
     for (const off of this.unsubscribe) off();
+    this.resizeObserver.disconnect();
   }
 
   private openLanguageMenu(): void {
@@ -231,6 +255,62 @@ export class Ribbon {
     this.body.classList.toggle('is-popup', st.ribbonMinimized && st.ribbonPopup);
     this.minimizeButton.innerHTML = icon(st.ribbonMinimized ? 'chevronDown' : 'chevronUp', 16);
     this.minimizeButton.setAttribute('aria-label', st.ribbonMinimized ? t.ribbon.expand : t.ribbon.minimize);
+    this.fit();
+  }
+
+  /**
+   * Collapses groups into a button that opens them in a popup until the visible tab fits, as Paint's
+   * ribbon does when the window is narrow (on a phone, nearly all of them).
+   */
+  private fit(): void {
+    if (this.groupPopup?.isOpen) return;
+    const panel = [...this.panels.values()].find((p) => !p.hidden);
+    if (!panel?.clientWidth) return;
+    const groups = [...panel.querySelectorAll<HTMLElement>(':scope > .rb-group[data-collapse]')].toSorted(
+      (a, b) => Number(a.dataset.collapse) - Number(b.dataset.collapse),
+    );
+    const fits = (): boolean => panel.scrollWidth <= panel.clientWidth;
+    panel.classList.remove('is-compact');
+    for (const g of groups) g.classList.remove('is-collapsed');
+    for (const g of groups) {
+      if (fits()) break;
+      g.classList.add('is-collapsed');
+    }
+    // Still too wide (a phone): collapsed groups and the big buttons on their own show only their icon.
+    if (!fits()) panel.classList.add('is-compact');
+    // Expand again, most used first, the groups that now fit.
+    for (const g of groups.toReversed()) {
+      if (!g.classList.contains('is-collapsed')) continue;
+      g.classList.remove('is-collapsed');
+      if (!fits()) g.classList.add('is-collapsed');
+    }
+    this.updateScrollHint(panel);
+  }
+
+  /** Fades the edge where there is more ribbon to scroll to. */
+  private updateScrollHint(panel: HTMLElement): void {
+    const max = panel.scrollWidth - panel.clientWidth;
+    panel.classList.toggle('has-more-left', max > 1 && panel.scrollLeft > 1);
+    panel.classList.toggle('has-more-right', max > 1 && panel.scrollLeft < max - 1);
+  }
+
+  private openGroup(group: HTMLElement, owner: HTMLButtonElement, body: HTMLElement, caption: HTMLElement): void {
+    closeAllPopups();
+    const p = new Popup('rb-grouppop', owner);
+    p.el.append(h('div.rb-group', {}, body, caption));
+    p.el.addEventListener('pointerdown', keepFocus);
+    // Picking a color closes it, as picking a tool or running a command does.
+    p.el.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.rb-swatch')) p.close();
+    });
+    p.onClose = () => {
+      group.append(body, caption);
+      this.groupPopup = null;
+    };
+    this.groupPopup = p;
+    p.open();
+    const r = owner.getBoundingClientRect();
+    placePopup(p.el, r.left, r.bottom, { x: r.right, y: r.top });
   }
 
   private syncColors(st: Readonly<AppState>): void {
@@ -261,10 +341,11 @@ export class Ribbon {
     });
   }
 
-  private run(cmd: string): void {
-    closeAllPopups();
+  /** Runs a command from the ribbon and closes its popups, except the one holding `keep`. */
+  private run(cmd: string, keep?: HTMLElement): void {
+    closeAllPopups(keep);
     void this.commands[cmd]?.run();
-    if (this.app.store.state.ribbonPopup) this.app.store.set({ ribbonPopup: false });
+    if (!keep && this.app.store.state.ribbonPopup) this.app.store.set({ ribbonPopup: false });
   }
 
   private large(
@@ -298,7 +379,13 @@ export class Ribbon {
     );
     const drop = h(
       'button.rb-split-drop',
-      { type: 'button', 'data-kt': kt, 'aria-haspopup': 'true', onclick: () => onDrop(wrap) },
+      {
+        type: 'button',
+        'data-kt': kt,
+        'aria-label': label ?? plainLabel(c.label),
+        'aria-haspopup': 'true',
+        onclick: () => onDrop(wrap),
+      },
       h('span.rb-label', {}, label ?? plainLabel(c.label)),
       svg(icon('dropdown', 16), 'rb-caret'),
     );
@@ -314,7 +401,13 @@ export class Ribbon {
     const c = this.commands[cmd];
     const b = h(
       'button.rb-large.rb-largedrop',
-      { type: 'button', 'data-kt': kt, 'aria-haspopup': 'true', onclick: () => onDrop(b) },
+      {
+        type: 'button',
+        'data-kt': kt,
+        'aria-label': plainLabel(c.label),
+        'aria-haspopup': 'true',
+        onclick: () => onDrop(b),
+      },
       svg(icon(c.icon ?? 'app', 32)),
       h('span.rb-label', {}, plainLabel(c.label)),
       svg(icon('dropdown', 16), 'rb-caret'),
@@ -372,13 +465,30 @@ export class Ribbon {
     return l;
   }
 
-  private group(label: string, ...children: HTMLElement[]): HTMLElement {
-    return h(
-      'div.rb-group',
-      { role: 'group', 'aria-label': label || null },
-      h('div.rb-group-body', {}, ...children),
-      h('div.rb-group-label', {}, label),
-    );
+  private group(label: string, collapse: Collapse | null, ...children: HTMLElement[]): HTMLElement {
+    const body = h('div.rb-group-body', {}, ...children);
+    const caption = h('div.rb-group-label', {}, label);
+    const group = h('div.rb-group', { role: 'group', 'aria-label': label || null }, body, caption);
+    if (collapse) {
+      group.dataset.collapse = String(collapse.order);
+      const b = h(
+        'button.rb-large.rb-groupbtn',
+        {
+          type: 'button',
+          'data-kt': collapse.kt,
+          'aria-label': label,
+          'aria-haspopup': 'true',
+          'aria-expanded': 'false',
+          onclick: () => this.openGroup(group, b, body, caption),
+        },
+        svg(icon(collapse.icon, 32)),
+        h('span.rb-label', {}, label),
+        svg(icon('dropdown', 16), 'rb-caret'),
+      );
+      this.tips.attach(b, () => ({ title: label }));
+      group.prepend(b);
+    }
+    return group;
   }
 
   private col(...children: HTMLElement[]): HTMLElement {
@@ -391,6 +501,7 @@ export class Ribbon {
     const c = this.commands;
     const clipboard = this.group(
       t.ribbon.groups.clipboard,
+      { order: 3, icon: 'paste', kt: 'ZC' },
       this.splitLarge(
         'edit.paste',
         'V',
@@ -427,6 +538,7 @@ export class Ribbon {
     );
     const image = this.group(
       t.ribbon.groups.image,
+      { order: 2, icon: 'selectRect', kt: 'ZI' },
       this.selectMain,
       this.col(
         this.small('edit.crop', 'RP'),
@@ -445,6 +557,7 @@ export class Ribbon {
 
     const tools = this.group(
       t.ribbon.groups.tools,
+      { order: 5, icon: 'pencil', kt: 'ZT' },
       h(
         'div.rb-toolgrid',
         {},
@@ -458,7 +571,7 @@ export class Ribbon {
     );
 
     this.brushMain = this.splitLarge('tool.brush', 'B', (o) => this.openBrushGallery(o), 'brushBrush');
-    const brushes = this.group('', this.brushMain);
+    const brushes = this.group('', null, this.brushMain);
 
     this.shapeGrid = h('div.rb-shapes-grid', { role: 'listbox', 'aria-label': t.ribbon.shapes });
     for (const kind of SHAPE_ORDER) {
@@ -516,10 +629,15 @@ export class Ribbon {
         'menu-styles',
       ),
     );
-    const shapes = this.group(t.ribbon.groups.shapes, gallery, this.col(outline, fill));
+    const shapes = this.group(
+      t.ribbon.groups.shapes,
+      { order: 1, icon: 'shapes', kt: 'ZS' },
+      gallery,
+      this.col(outline, fill),
+    );
 
     this.sizeButton = this.largeDrop('size', 'SZ', (o) => this.openSizeList(o));
-    const size = this.group('', this.sizeButton);
+    const size = this.group('', null, this.sizeButton);
 
     this.color1El = this.colorButton(1, '1');
     this.color2El = this.colorButton(2, '2');
@@ -552,6 +670,7 @@ export class Ribbon {
     }
     const colors = this.group(
       t.ribbon.groups.colors,
+      { order: 4, icon: 'editColors', kt: 'ZL' },
       this.color1El,
       this.color2El,
       this.paletteEl,
@@ -577,7 +696,8 @@ export class Ribbon {
     const cmd = `color.${which}`;
     const b = h(
       'button.rb-large.rb-color',
-      { type: 'button', 'data-kt': kt, onclick: () => this.run(cmd) },
+      // Keeps a collapsed Colors group open: the next tap is usually on the palette.
+      { type: 'button', 'data-kt': kt, onclick: () => this.run(cmd, b) },
       h('span.rb-swatch-frame', {}, h('span.rb-swatch-big')),
       h('span.rb-label', {}, t.ribbon.color(which)),
     );
@@ -589,7 +709,9 @@ export class Ribbon {
   private scrollShapes(dir: 1 | -1): void {
     const rows = Math.ceil(SHAPE_ORDER.length / 7);
     this.shapeScroll = Math.min(Math.max(0, this.shapeScroll + dir), rows - 3);
-    this.shapeGrid.style.transform = `translateY(${-this.shapeScroll * 21}px)`;
+    // A row is 21 px, or more on touch screens.
+    const row = (this.shapeGrid.firstElementChild as HTMLElement | null)?.offsetHeight || 21;
+    this.shapeGrid.style.transform = `translateY(${-this.shapeScroll * row}px)`;
   }
 
   private syncShapeGrid(): void {
@@ -600,7 +722,7 @@ export class Ribbon {
   }
 
   private openShapeGallery(owner: HTMLElement): void {
-    closeAllPopups();
+    closeAllPopups(owner);
     const p = new Popup('gallery gallery-shapes', owner);
     const st = this.app.store.state;
     for (const kind of SHAPE_ORDER) {
@@ -616,12 +738,11 @@ export class Ribbon {
     }
     p.open();
     const r = owner.getBoundingClientRect();
-    p.el.style.left = `${r.left}px`;
-    p.el.style.top = `${r.top}px`;
+    placePopup(p.el, r.left, r.top);
   }
 
   private openBrushGallery(owner: HTMLElement): void {
-    closeAllPopups();
+    closeAllPopups(owner);
     const p = new Popup('gallery gallery-brushes', owner);
     const st = this.app.store.state;
     for (const kind of BRUSH_ORDER) {
@@ -636,12 +757,11 @@ export class Ribbon {
     }
     p.open();
     const r = owner.getBoundingClientRect();
-    p.el.style.left = `${r.left}px`;
-    p.el.style.top = `${r.bottom}px`;
+    placePopup(p.el, r.left, r.bottom, { x: r.right, y: r.top });
   }
 
   private openSizeList(owner: HTMLElement): void {
-    closeAllPopups();
+    closeAllPopups(owner);
     const opts = sizeOptions(this.app);
     if (!opts.length) return;
     const p = new Popup('gallery gallery-sizes', owner);
@@ -660,8 +780,7 @@ export class Ribbon {
     }
     p.open();
     const r = owner.getBoundingClientRect();
-    p.el.style.left = `${r.left}px`;
-    p.el.style.top = `${r.bottom}px`;
+    placePopup(p.el, r.left, r.bottom, { x: r.right, y: r.top });
   }
 
   // ---------------------------------------------------------------- View
@@ -669,16 +788,19 @@ export class Ribbon {
   private buildView(): HTMLElement {
     const zoom = this.group(
       t.ribbon.groups.zoom,
+      { order: 3, icon: 'zoomIn', kt: 'ZZ' },
       this.large('view.zoomIn', 'I'),
       this.large('view.zoomOut', 'O'),
       this.large('view.zoom100', 'M', { label: t.ribbon.zoom100 }),
     );
     const show = this.group(
       t.ribbon.groups.showHide,
+      { order: 2, icon: 'thumbnail', kt: 'ZH' },
       this.col(this.check('view.rulers', 'R'), this.check('view.grid', 'G'), this.check('view.statusBar', 'S')),
     );
     const display = this.group(
       t.ribbon.groups.display,
+      { order: 1, icon: 'fullscreen', kt: 'ZD' },
       this.large('view.fullscreen', 'F', { label: t.ribbon.fullscreen }),
       this.large('view.thumbnail', 'T', { toggle: true }),
     );
@@ -691,6 +813,7 @@ export class Ribbon {
     const text = (): TextTool => this.app.tools.text as TextTool;
     const clipboard = this.group(
       t.ribbon.groups.clipboard,
+      { order: 2, icon: 'paste', kt: 'ZC' },
       this.large('edit.paste', 'P1'),
       this.col(this.small('edit.cut', 'X'), this.small('edit.copy', 'C')),
     );
@@ -728,6 +851,7 @@ export class Ribbon {
     this.bindTip(sizeCombo, 'text.size');
     const font = this.group(
       t.ribbon.groups.font,
+      { order: 4, icon: 'text', kt: 'ZF' },
       h(
         'div.rb-fontgrid',
         {},
@@ -745,6 +869,7 @@ export class Ribbon {
     );
     const background = this.group(
       t.ribbon.groups.background,
+      { order: 3, icon: 'opaque', kt: 'ZB' },
       this.col(this.small('text.opaque', 'O', { toggle: true }), this.small('text.transparent', 'T', { toggle: true })),
     );
 
@@ -763,6 +888,7 @@ export class Ribbon {
     });
     const colors = this.group(
       t.ribbon.groups.colors,
+      { order: 1, icon: 'editColors', kt: 'ZL' },
       c1,
       c2,
       palette,
@@ -823,7 +949,7 @@ export class Ribbon {
   }
 
   private openFontList(owner: HTMLElement): void {
-    closeAllPopups();
+    closeAllPopups(owner);
     const p = new Popup('gallery gallery-fonts', owner);
     const list = h('div.font-list', { role: 'listbox' });
     const current = this.app.store.state.font.family;
@@ -861,13 +987,12 @@ export class Ribbon {
     p.el.append(list, more);
     p.open();
     const r = owner.getBoundingClientRect();
-    p.el.style.left = `${r.left}px`;
-    p.el.style.top = `${r.bottom}px`;
+    placePopup(p.el, r.left, r.bottom, { x: r.right, y: r.top });
     list.querySelector<HTMLElement>('.is-checked')?.scrollIntoView({ block: 'center' });
   }
 
   private openFontSizeList(owner: HTMLElement): void {
-    closeAllPopups();
+    closeAllPopups(owner);
     const p = new Popup('gallery gallery-fontsizes', owner);
     const cur = this.app.store.state.font.size;
     for (const s of [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]) {
@@ -881,8 +1006,7 @@ export class Ribbon {
     }
     p.open();
     const r = owner.getBoundingClientRect();
-    p.el.style.left = `${r.left}px`;
-    p.el.style.top = `${r.bottom}px`;
+    placePopup(p.el, r.left, r.bottom, { x: r.right, y: r.top });
   }
 
   // ---------------------------------------------------------------- Print preview
@@ -890,11 +1014,13 @@ export class Ribbon {
   private buildPreview(): HTMLElement {
     const print = this.group(
       t.ribbon.groups.print,
+      { order: 3, icon: 'print', kt: 'ZP' },
       this.large('preview.print', 'P'),
       this.large('preview.pageSetup', 'S', { label: t.ribbon.pageSetup }),
     );
     const zoom = this.group(
       t.ribbon.groups.zoom,
+      { order: 2, icon: 'zoomIn', kt: 'ZZ' },
       this.large('preview.zoomIn', 'I'),
       this.large('preview.zoomOut', 'O'),
       this.col(
@@ -904,10 +1030,11 @@ export class Ribbon {
     );
     const nav = this.group(
       t.ribbon.groups.preview,
+      { order: 1, icon: 'nextPage', kt: 'ZV' },
       this.large('preview.prev', 'V', { label: t.ribbon.prevPage }),
       this.large('preview.next', 'N', { label: t.ribbon.nextPage }),
     );
-    const close = this.group('', this.large('preview.close', 'C', { label: t.ribbon.closePreview }));
+    const close = this.group('', null, this.large('preview.close', 'C', { label: t.ribbon.closePreview }));
     return h('div.rb-panel', { role: 'tabpanel', 'aria-label': t.ribbon.tabs.preview }, print, zoom, nav, close);
   }
 }

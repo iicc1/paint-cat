@@ -11,6 +11,8 @@ and TIFF.
 
 - **No server**: it is a static site. Everything happens in the browser and pictures never leave your computer.
 - **Works offline** and can be **installed as an app** (PWA) on Windows, macOS and Linux.
+- **Phones and tablets**: when the window is narrow the Ribbon collapses its groups into buttons, as Paint does, and
+  the canvas is drawn with one finger, zoomed with a pinch and scrolled with two fingers.
 - **English, Catalan and Spanish**, with the texts, tooltips and keyboard shortcuts of the original Paint in each
   language.
 

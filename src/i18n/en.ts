@@ -316,6 +316,7 @@ export const en: Messages = {
     print: 'Print',
     wallpaper: 'Set as desktop background',
     moreOptions: (label: string) => `${label}: more options`,
+    back: 'Back',
   },
 
   status: {

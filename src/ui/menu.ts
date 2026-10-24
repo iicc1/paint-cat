@@ -47,8 +47,9 @@ export class Popup {
   }
 }
 
-export function closeAllPopups(): void {
-  for (const p of stack.toReversed()) p.close();
+/** Closes every popup, except those containing `keep` (a control that opens a new popup from inside one). */
+export function closeAllPopups(keep?: Node | null): void {
+  for (const p of stack.toReversed()) if (!keep || !p.el.contains(keep)) p.close();
 }
 
 export function topPopup(): Popup | undefined {
@@ -59,19 +60,33 @@ export function anyPopupOpen(): boolean {
   return stack.length > 0;
 }
 
-// Click outside any popup: close them all.
+let dismissing: Event | null = null;
+
+// Click outside a popup: close it and the ones above it, down to the one that was clicked (if any).
 document.addEventListener(
   'pointerdown',
   (e) => {
-    if (!stack.length) return;
     const t = e.target as Node;
-    if (stack.some((p) => p.el.contains(t) || p.owner?.contains(t))) return;
-    closeAllPopups();
+    for (const p of stack.toReversed()) {
+      if (p.el.contains(t) || p.owner?.contains(t)) break;
+      p.close();
+      dismissing = e;
+    }
   },
   true,
 );
+
+/** The pointer press only closed a popup: as in Windows, it must not also act (draw on the canvas). */
+export function closedPopup(e: Event): boolean {
+  return e === dismissing;
+}
 window.addEventListener('blur', () => closeAllPopups());
-window.addEventListener('resize', () => closeAllPopups());
+window.addEventListener('resize', () => {
+  // A field in a popup (font name) opens the on-screen keyboard, which resizes the window: it stays open.
+  const focused = document.activeElement;
+  if (focused instanceof HTMLInputElement && stack.some((p) => p.el.contains(focused))) return;
+  closeAllPopups();
+});
 
 export interface MenuOptions {
   owner?: HTMLElement | null;
@@ -248,7 +263,7 @@ export class Menu extends Popup {
 
 /** Opens a menu below a ribbon button. */
 export function dropMenu(commands: Commands, owner: HTMLElement, entries: MenuEntry[], className = ''): Menu {
-  closeAllPopups();
+  closeAllPopups(owner);
   const r = owner.getBoundingClientRect();
   return new Menu(commands, entries, { owner, className, alt: { x: r.right, y: r.top } }).show(r.left, r.bottom);
 }

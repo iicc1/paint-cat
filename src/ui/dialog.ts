@@ -131,7 +131,8 @@ export function showDialog<T>(opts: DialogOptions<T>): Promise<T | null> {
     document.body.append(overlay);
     const focusTarget = opts.focus ?? buttons[opts.buttons.findIndex((b) => b.default)] ?? buttons[0];
     requestAnimationFrame(() => {
-      focusTarget?.focus();
+      // Without scrolling: on a small screen a tall dialog must open showing its top, not its buttons.
+      focusTarget?.focus({ preventScroll: true });
       if (focusTarget instanceof HTMLInputElement) focusTarget.select();
     });
   });

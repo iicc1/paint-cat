@@ -349,6 +349,7 @@ export const ca: Messages = {
     print: 'Imprimeix',
     wallpaper: "Defineix com a fons d'escriptori",
     moreOptions: (label: string) => `${label}: més opcions`,
+    back: 'Enrere',
   },
 
   status: {
