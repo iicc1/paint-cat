@@ -1,7 +1,7 @@
 import type { App } from '../app/app';
 import type { AppState } from '../app/state';
 import { dist, inflate, intRect, normRect, rectOfPoints } from '../app/geometry';
-import { cursorForHandle, drawHandles, handlePoint, resizeByHandle, type Handle } from '../app/selection';
+import { cursorForHandle, drawHandles, hitHandles, resizeByHandle, type Handle } from '../app/selection';
 import { fillContours, strokeContours } from '../paint/brushes';
 import {
   constrainAngle45,
@@ -13,7 +13,7 @@ import {
 } from '../paint/shapes';
 import type { Contour, Point, Rect, ShapeKind } from '../paint/types';
 import { cursorCss } from '../ui/cursors';
-import type { OverlayContext, PointerInfo, Tool } from './tool';
+import { grabRadius, type OverlayContext, type PointerInfo, type Tool } from './tool';
 
 type BoxKind = Exclude<ShapeKind, 'line' | 'curve' | 'polygon'>;
 
@@ -78,7 +78,7 @@ export class ShapeTool implements Tool {
       return;
     }
     if (live?.type === 'polygon' && !live.closed) {
-      if (live.points.length > 2 && dist(pt, live.points[0]) * this.app.view.zoom <= 6) {
+      if (live.points.length > 2 && dist(pt, live.points[0]) * this.app.view.zoom <= Math.max(6, grabRadius(p))) {
         live.closed = true;
         this.drag = null;
         this.render();
@@ -322,20 +322,18 @@ export class ShapeTool implements Tool {
     const live = this.live;
     if (!live) return null;
     const tol = 5 / this.app.view.zoom;
+    const grab = grabRadius(p) / this.app.view.zoom;
     if (live.type === 'line') {
-      if (dist(p, live.a) <= tol) return 'a';
-      if (dist(p, live.b) <= tol) return 'b';
+      if (dist(p, live.a) <= grab) return 'a';
+      if (dist(p, live.b) <= grab) return 'b';
     }
     const b = this.bbox(live);
-    if (live.type !== 'line') {
-      for (const h of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as Handle[]) {
-        const c = handlePoint(b, h);
-        if (Math.abs(p.x - c.x) <= tol && Math.abs(p.y - c.y) <= tol) return h;
-      }
-    }
-    const pad = live.type === 'line' ? tol : 0;
+    const handle = live.type !== 'line' ? hitHandles(b, p, tol) : null;
+    if (handle) return handle;
+    const pad = live.type === 'line' ? grab : 0;
     if (p.x >= b.x - pad && p.y >= b.y - pad && p.x <= b.x + b.w + pad && p.y <= b.y + b.h + pad) return 'move';
-    return null;
+    // A finger grabs handles from further away, but never instead of moving a small shape.
+    return live.type !== 'line' && p.touch ? hitHandles(b, p, grab) : null;
   }
 
   private bbox(live: Live): Rect {

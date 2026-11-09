@@ -10,9 +10,10 @@
 }
 
 .dialog {
-  min-width: 260px;
+  min-width: min(260px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
   overflow: auto;
   background: var(--dialog-bg);
   border: 1px solid #1883d7;
@@ -344,6 +345,12 @@
   cursor: pointer;
 }
 
+/* A finger drags the color pickers instead of scrolling the dialog. */
+.ec-field,
+.ec-lumwrap {
+  touch-action: none;
+}
+
 .ec-arrow {
   position: absolute;
   right: 0;
@@ -546,4 +553,94 @@
 
 .help-dialog li {
   margin-bottom: 4px;
+}
+
+/* ------------------------------------------------------------------ narrow screen (phones) */
+
+/* The dialog is at most the screen's width: fixed-width bodies shrink and side-by-side columns wrap. */
+.rs-dialog,
+.pr-dialog,
+.sa-dialog,
+.about-dialog,
+.help-dialog {
+  max-width: calc(100vw - 42px);
+}
+
+.ec-dialog,
+.ps-dialog {
+  flex-wrap: wrap;
+}
+
+.ps-right .dlg-select {
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .sa-dialog .dlg-row {
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+
+  .sa-dialog .dlg-row > label {
+    width: 100%;
+  }
+
+  .pr-cols,
+  .ps-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .ps-dialog > .dlg-group {
+    width: 100%;
+  }
+
+  .ps-preview {
+    height: 170px;
+  }
+}
+
+/* Touch screen: bigger buttons and fields; 16 px text so iOS does not zoom into a field when it gets the focus. */
+@media (pointer: coarse) {
+  .dlg-titlebar {
+    height: 40px;
+  }
+
+  .dlg-close {
+    width: 50px;
+    height: 40px;
+  }
+
+  .dlg-button {
+    min-width: 84px;
+    height: 36px;
+  }
+
+  .dlg-input,
+  .dlg-select {
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .dlg-check {
+    min-height: 32px;
+  }
+
+  .dlg-check input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ec-grid {
+    grid-template-columns: repeat(8, 26px);
+    grid-auto-rows: 26px;
+  }
+
+  .ec-swatch {
+    width: 24px;
+    height: 22px;
+  }
+
+  .ec-col .dlg-input {
+    min-width: 44px;
+  }
 }

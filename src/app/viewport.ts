@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import type { Point, Rect } from '../paint/types';
 import type { OverlayContext, PointerInfo } from '../tools/tool';
+import { closedPopup } from '../ui/menu';
 import type { App } from './app';
 import { clamp } from './geometry';
 
@@ -8,6 +9,15 @@ import { clamp } from './geometry';
 export const MARGIN = 5;
 const HANDLE = 5;
 const HANDLE_HIT = 6;
+/** A finger is less precise than the mouse: the canvas resize handles grab from further away. */
+const HANDLE_HIT_TOUCH = 14;
+/**
+ * A finger on the canvas waits this long (ms) before drawing: if a second one lands meanwhile, it was
+ * a two-finger gesture (zoom and scroll) and nothing is drawn. Then the held-back movement is replayed.
+ */
+const TOUCH_HOLD = 90;
+/** Pinch-zoom only starts when the fingers spread or close this much (a two-finger scroll keeps the zoom). */
+const PINCH_THRESHOLD = 0.06;
 
 /** Paint zoom levels: Zoom out 100→50→25→12.5 %; Zoom in 100→200→…→800 %. */
 export const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -17,7 +27,30 @@ export function nextZoom(z: number, dir: 1 | -1): number {
   return ZOOM_LEVELS.toReversed().find((l) => l < z - 1e-9) ?? ZOOM_LEVELS[0];
 }
 
+/** Index of the zoom level closest to `z` (pinch-zoom gives any value in between). */
+export function nearestZoomLevel(z: number): number {
+  let best = 0;
+  for (let i = 1; i < ZOOM_LEVELS.length; i++) {
+    if (Math.abs(Math.log(ZOOM_LEVELS[i] / z)) < Math.abs(Math.log(ZOOM_LEVELS[best] / z))) best = i;
+  }
+  return best;
+}
+
 type ResizeHandle = 'e' | 's' | 'se';
+
+interface Pinch {
+  /** Distance between the fingers and zoom when the gesture (re)started. */
+  dist: number;
+  zoom: number;
+  /** Image point under the midpoint of the fingers: it stays under them. */
+  at: Point;
+  zooming: boolean;
+}
+
+function coalesced(e: PointerEvent): PointerEvent[] {
+  const list = e.getCoalescedEvents?.() ?? [];
+  return list.length ? list : [e];
+}
 
 /**
  * Work area: a fixed `<canvas>` that paints the visible portion of the image and, on top,
@@ -41,9 +74,20 @@ export class Viewport {
   private viewW = 0;
   private viewH = 0;
   private pressed = false;
+  private downButton = 0;
+  /** Pointer drawing the stroke in progress, its last event and the image history when it began. */
+  private stroke: { id: number; type: string; last: PointerEvent; revision: number } | null = null;
   private holdTimer = 0;
   private resizing: { handle: ResizeHandle; w: number; h: number } | null = null;
   private lastPointer: PointerInfo | null = null;
+  /** Fingers on the canvas (touch screens): one draws, two zoom and scroll. */
+  private readonly touches = new Map<number, { x: number; y: number }>();
+  /** The first finger's events, held back while it could still become a two-finger gesture. */
+  private held: { events: PointerEvent[]; timer: number } | null = null;
+  private pinch: Pinch | null = null;
+  private pinchFrame = 0;
+  /** After a pinch, the finger left on the screen does nothing until it is lifted. */
+  private pinchTail = false;
   private readonly listeners: (() => void)[] = [];
 
   constructor(private readonly app: App) {
@@ -112,10 +156,7 @@ export class Viewport {
     this.dpr = window.devicePixelRatio || 1;
     this.viewW = this.scroller.clientWidth;
     this.viewH = this.scroller.clientHeight;
-    this.view.style.width = `${this.viewW}px`;
-    this.view.style.height = `${this.viewH}px`;
-    this.view.width = Math.max(1, Math.round(this.viewW * this.dpr));
-    this.view.height = Math.max(1, Math.round(this.viewH * this.dpr));
+    sizeCanvas(this.view, this.viewW, this.viewH, this.dpr);
     const st = this.app.store.state;
     this.root.classList.toggle('has-rulers', st.showRulers);
     if (st.showRulers) {
@@ -129,19 +170,24 @@ export class Viewport {
 
   /** Changes the zoom keeping the `anchor` point (client coordinates) or the view center fixed. */
   setZoom(next: number, anchor?: { clientX: number; clientY: number }): void {
-    const z0 = this.zoom;
-    const z1 = clamp(next, ZOOM_LEVELS[0], ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);
-    if (z1 === z0) return;
+    const z = clamp(next, ZOOM_LEVELS[0], ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);
+    if (z === this.zoom) return;
     const r = this.scroller.getBoundingClientRect();
-    const ax = anchor ? anchor.clientX - r.left : this.viewW / 2;
-    const ay = anchor ? anchor.clientY - r.top : this.viewH / 2;
-    const docX = (this.scroller.scrollLeft + ax - MARGIN) / z0;
-    const docY = (this.scroller.scrollTop + ay - MARGIN) / z0;
-    this.app.store.set({ zoom: z1 });
-    this.app.store.flush();
-    this.layout();
-    this.scroller.scrollLeft = Math.max(0, docX * z1 + MARGIN - ax);
-    this.scroller.scrollTop = Math.max(0, docY * z1 + MARGIN - ay);
+    const x = anchor ? anchor.clientX : r.left + this.viewW / 2;
+    const y = anchor ? anchor.clientY : r.top + this.viewH / 2;
+    this.zoomAt(z, this.fromClient(x, y), { x, y });
+  }
+
+  /** Sets the zoom and scrolls so that image point `at` ends up under client point `client`. */
+  private zoomAt(z: number, at: Point, client: { x: number; y: number }): void {
+    if (z !== this.zoom) {
+      this.app.store.set({ zoom: z });
+      this.app.store.flush();
+      this.layout();
+    }
+    const r = this.scroller.getBoundingClientRect();
+    this.scroller.scrollLeft = Math.max(0, at.x * z + MARGIN - (client.x - r.left));
+    this.scroller.scrollTop = Math.max(0, at.y * z + MARGIN - (client.y - r.top));
     this.render();
   }
 
@@ -192,7 +238,7 @@ export class Viewport {
   refreshCursor(): void {
     const p = this.lastPointer;
     if (this.resizing) return;
-    const handle = p ? this.hitResizeHandle(p.clientX, p.clientY) : null;
+    const handle = p ? this.hitResizeHandle(p.clientX, p.clientY, p.touch) : null;
     if (handle) this.setCursor(handle === 'e' ? 'ew-resize' : handle === 's' ? 'ns-resize' : 'nwse-resize');
     else this.setCursor(this.app.tool.cursor(p && p.inside ? p : p));
   }
@@ -327,7 +373,7 @@ export class Viewport {
     ctx.restore();
   }
 
-  private hitResizeHandle(clientX: number, clientY: number): ResizeHandle | null {
+  private hitResizeHandle(clientX: number, clientY: number, touch = false): ResizeHandle | null {
     if (this.app.store.state.printPreview || this.app.store.state.textEditing) return null;
     const r = this.scroller.getBoundingClientRect();
     const vx = clientX - r.left;
@@ -336,11 +382,12 @@ export class Viewport {
     const ox = MARGIN - this.scroller.scrollLeft;
     const oy = MARGIN - this.scroller.scrollTop;
     const rects = this.handleRects(ox, oy, this.app.doc.width * z, this.app.doc.height * z);
+    const hit = touch ? HANDLE_HIT_TOUCH : HANDLE_HIT;
     for (const key of ['se', 'e', 's'] as const) {
       const h = rects[key];
       const cx = h.x + h.w / 2;
       const cy = h.y + h.h / 2;
-      if (Math.abs(vx - cx) <= HANDLE_HIT && Math.abs(vy - cy) <= HANDLE_HIT) return key;
+      if (Math.abs(vx - cx) <= hit && Math.abs(vy - cy) <= hit) return key;
     }
     return null;
   }
@@ -441,6 +488,7 @@ export class Viewport {
       shift: e.shiftKey,
       ctrl: e.ctrlKey || e.metaKey,
       alt: e.altKey,
+      touch: 'pointerType' in e && e.pointerType === 'touch',
       inside: p.x >= 0 && p.y >= 0 && p.x < width && p.y < height,
       clientX: e.clientX,
       clientY: e.clientY,
@@ -449,79 +497,22 @@ export class Viewport {
 
   private bindPointer(): void {
     const s = this.scroller;
-    let downButton = 0;
 
     s.addEventListener('contextmenu', (e) => e.preventDefault());
 
     s.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 && e.button !== 2) return;
-      if (e.target !== s && e.target !== this.content) return; // click inside the text editor
-      if (this.pressed) return;
-      if (e.clientX - s.getBoundingClientRect().left >= s.clientWidth) return; // scrollbar
-      if (e.clientY - s.getBoundingClientRect().top >= s.clientHeight) return;
-      this.app.closePopups();
-      if (this.app.store.state.printPreview) return;
-      e.preventDefault();
-      const handle = e.button === 0 ? this.hitResizeHandle(e.clientX, e.clientY) : null;
-      s.setPointerCapture(e.pointerId);
-      this.pressed = true;
-      downButton = e.button;
-      if (handle) {
-        this.app.commitLive();
-        this.resizing = { handle, w: this.app.doc.width, h: this.app.doc.height };
-        this.app.store.set({ selectionSize: { w: this.resizing.w, h: this.resizing.h } });
-        this.invalidate();
-        return;
-      }
-      const p = this.info(e);
-      this.lastPointer = p;
-      this.app.tool.down?.(p);
-      if (this.app.tool.hold) {
-        this.holdTimer = window.setInterval(() => this.app.tool.hold?.(), 30);
-      }
-      this.updateStatus(p);
+      if (e.pointerType === 'touch') this.touchDown(e);
+      else this.down(e);
     });
-
     s.addEventListener('pointermove', (e) => {
-      const p = this.info(e, this.pressed ? downButton : 0);
-      this.lastPointer = p;
-      if (this.resizing) {
-        const handle = this.resizing.handle;
-        const w = handle === 's' ? this.app.doc.width : Math.max(1, Math.round(p.x));
-        const h = handle === 'e' ? this.app.doc.height : Math.max(1, Math.round(p.y));
-        this.resizing = { handle, w, h };
-        this.app.store.set({ selectionSize: { w, h } });
-        this.invalidate();
-        return;
-      }
-      if (this.pressed) {
-        for (const ev of e.getCoalescedEvents?.() ?? [e]) this.app.tool.move?.(this.info(ev, downButton));
-      } else {
-        this.app.tool.hover?.(p);
-        this.refreshCursor();
-      }
-      this.updateStatus(p);
+      if (e.pointerType !== 'touch' || !this.touchMove(e)) this.move(e);
     });
-
-    const finish = (e: PointerEvent, cancelled: boolean): void => {
-      if (!this.pressed) return;
-      this.pressed = false;
-      window.clearInterval(this.holdTimer);
-      if (s.hasPointerCapture(e.pointerId)) s.releasePointerCapture(e.pointerId);
-      if (this.resizing) {
-        const { w, h } = this.resizing;
-        this.resizing = null;
-        this.app.store.set({ selectionSize: null });
-        if (!cancelled && (w !== this.app.doc.width || h !== this.app.doc.height)) this.app.resizeCanvas(w, h);
-        this.invalidate();
-        return;
-      }
-      const p = this.info(e, downButton);
-      this.app.tool.up?.(p);
-      this.refreshCursor();
-    };
-    s.addEventListener('pointerup', (e) => finish(e, false));
-    s.addEventListener('pointercancel', (e) => finish(e, true));
+    s.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'touch' || !this.touchUp(e, false)) this.finish(e, false);
+    });
+    s.addEventListener('pointercancel', (e) => {
+      if (e.pointerType !== 'touch' || !this.touchUp(e, true)) this.finish(e, true);
+    });
 
     s.addEventListener('pointerleave', () => {
       if (this.pressed) return;
@@ -541,10 +532,225 @@ export class Viewport {
       (e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
         e.preventDefault();
-        this.setZoom(nextZoom(this.zoom, e.deltaY < 0 ? 1 : -1), e);
+        // Small steps come from pinching a trackpad: smooth zoom. A mouse wheel notch goes to the next level.
+        if (e.deltaMode === 0 && Math.abs(e.deltaY) < 40) this.setZoom(this.zoom * Math.exp(-e.deltaY / 100), e);
+        else this.setZoom(nextZoom(this.zoom, e.deltaY < 0 ? 1 : -1), e);
       },
       { passive: false },
     );
+  }
+
+  /** On the canvas itself, not on the text box or the scrollbars. */
+  private onCanvas(e: PointerEvent): boolean {
+    const s = this.scroller;
+    if (e.target !== s && e.target !== this.content) return false;
+    const r = s.getBoundingClientRect();
+    return e.clientX - r.left < s.clientWidth && e.clientY - r.top < s.clientHeight;
+  }
+
+  private down(e: PointerEvent): void {
+    const s = this.scroller;
+    if (e.button !== 0 && e.button !== 2) return;
+    if (this.pressed || !this.onCanvas(e)) return;
+    // The press that closes a menu (or the expanded minimized ribbon) does nothing else, as in Windows.
+    const st = this.app.store.state;
+    if (closedPopup(e) || (st.ribbonMinimized && st.ribbonPopup)) return;
+    this.app.closePopups();
+    if (st.printPreview) return;
+    e.preventDefault();
+    const touch = e.pointerType === 'touch';
+    const handle = e.button === 0 ? this.hitResizeHandle(e.clientX, e.clientY, touch) : null;
+    try {
+      s.setPointerCapture(e.pointerId);
+    } catch {
+      // The finger was already lifted (a quick tap replayed on release).
+    }
+    this.pressed = true;
+    this.downButton = e.button;
+    this.stroke = { id: e.pointerId, type: e.pointerType, last: e, revision: this.app.doc.revision };
+    if (handle) {
+      this.app.commitLive();
+      this.resizing = { handle, w: this.app.doc.width, h: this.app.doc.height };
+      this.app.store.set({ selectionSize: { w: this.resizing.w, h: this.resizing.h } });
+      this.invalidate();
+      return;
+    }
+    const p = this.info(e);
+    this.lastPointer = p;
+    this.app.tool.down?.(p);
+    if (this.app.tool.hold) {
+      this.holdTimer = window.setInterval(() => this.app.tool.hold?.(), 30);
+    }
+    this.updateStatus(p);
+  }
+
+  private move(e: PointerEvent, events = coalesced(e)): void {
+    if (this.pressed && e.pointerId !== this.stroke?.id) return;
+    const p = this.info(e, this.pressed ? this.downButton : 0);
+    this.lastPointer = p;
+    if (this.stroke) this.stroke.last = e;
+    if (this.resizing) {
+      const handle = this.resizing.handle;
+      const w = handle === 's' ? this.app.doc.width : Math.max(1, Math.round(p.x));
+      const h = handle === 'e' ? this.app.doc.height : Math.max(1, Math.round(p.y));
+      this.resizing = { handle, w, h };
+      this.app.store.set({ selectionSize: { w, h } });
+      this.invalidate();
+      return;
+    }
+    if (this.pressed) {
+      for (const ev of events) this.app.tool.move?.(this.info(ev, this.downButton));
+    } else {
+      this.app.tool.hover?.(p);
+      this.refreshCursor();
+    }
+    this.updateStatus(p);
+  }
+
+  private finish(e: PointerEvent, cancelled: boolean): void {
+    if (!this.pressed || e.pointerId !== this.stroke?.id) return;
+    const s = this.scroller;
+    this.pressed = false;
+    this.stroke = null;
+    window.clearInterval(this.holdTimer);
+    if (s.hasPointerCapture(e.pointerId)) s.releasePointerCapture(e.pointerId);
+    if (this.resizing) {
+      const { w, h } = this.resizing;
+      this.resizing = null;
+      this.app.store.set({ selectionSize: null });
+      if (!cancelled && (w !== this.app.doc.width || h !== this.app.doc.height)) this.app.resizeCanvas(w, h);
+      this.invalidate();
+      return;
+    }
+    const p = this.info(e, this.downButton);
+    this.app.tool.up?.(p);
+    this.refreshCursor();
+  }
+
+  // ---------------------------------------------------------------- touch
+
+  private touchDown(e: PointerEvent): void {
+    // While the pen (or the mouse) draws, a finger is the hand resting on the screen.
+    if (this.stroke && this.stroke.type !== 'touch') return;
+    const st = this.app.store.state;
+    if (!this.onCanvas(e) || closedPopup(e) || (st.ribbonMinimized && st.ribbonPopup)) return;
+    e.preventDefault();
+    try {
+      this.scroller.setPointerCapture(e.pointerId);
+    } catch {
+      // Not capturable: the finger is already gone.
+    }
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.touches.size === 1) {
+      this.held = { events: [e], timer: window.setTimeout(() => this.release(), TOUCH_HOLD) };
+    } else if (this.touches.size === 2) {
+      this.startPinch();
+    }
+  }
+
+  /** Returns true if the event belongs to a touch gesture (it must not reach the tool). */
+  private touchMove(e: PointerEvent): boolean {
+    if (!this.touches.has(e.pointerId)) return false;
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.pinch) {
+      // Each finger reports its own movement: update once per frame, with both fingers moved.
+      this.pinchFrame ||= requestAnimationFrame(() => {
+        this.pinchFrame = 0;
+        this.updatePinch();
+      });
+      return true;
+    }
+    if (this.held) {
+      this.held.events.push(...coalesced(e));
+      return true;
+    }
+    return this.pinchTail;
+  }
+
+  private touchUp(e: PointerEvent, cancelled: boolean): boolean {
+    if (!this.touches.delete(e.pointerId)) return false;
+    if (this.held) {
+      // A quick tap or stroke: draw it now, then finish it as usual.
+      if (cancelled) this.dropHeld();
+      else this.release();
+      return cancelled;
+    }
+    if (this.pinch) {
+      if (this.touches.size >= 2) this.startPinch();
+      else {
+        this.pinch = null;
+        this.pinchTail = this.touches.size > 0;
+      }
+      return true;
+    }
+    if (this.pinchTail) {
+      this.pinchTail = this.touches.size > 0;
+      return true;
+    }
+    return false;
+  }
+
+  /** The first finger was not the start of a gesture: it starts drawing, with the movement held back. */
+  private release(): void {
+    const held = this.held;
+    if (!held) return;
+    this.dropHeld();
+    const [first, ...moves] = held.events;
+    this.down(first);
+    if (moves.length) this.move(moves[moves.length - 1], moves);
+  }
+
+  private dropHeld(): void {
+    if (this.held) window.clearTimeout(this.held.timer);
+    this.held = null;
+  }
+
+  private startPinch(): void {
+    if (this.held) this.dropHeld();
+    else if (this.stroke?.type === 'touch') this.abortStroke();
+    const [a, b] = [...this.touches.values()];
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    this.pinch = {
+      dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      zoom: this.zoom,
+      at: this.fromClient(mid.x, mid.y),
+      zooming: this.pinch?.zooming ?? false,
+    };
+  }
+
+  private updatePinch(): void {
+    const pinch = this.pinch;
+    if (!pinch) return;
+    const [a, b] = [...this.touches.values()];
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+    if (!pinch.zooming && Math.abs(dist / pinch.dist - 1) > PINCH_THRESHOLD) {
+      pinch.zooming = true;
+      pinch.dist = dist;
+    }
+    let z = pinch.zooming ? pinch.zoom * (dist / pinch.dist) : pinch.zoom;
+    z = clamp(z, ZOOM_LEVELS[0], ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);
+    // Close to 100 %, it snaps to it.
+    if (Math.abs(z - 1) < 0.04) z = 1;
+    this.zoomAt(z, pinch.at, mid);
+  }
+
+  /**
+   * A second finger arrived after the first one started drawing: the stroke ends there and, if it was
+   * a pencil, brush or eraser stroke, it is undone (it was the start of a gesture, not a drawing).
+   */
+  private abortStroke(): void {
+    const stroke = this.stroke;
+    if (!stroke) return;
+    const undo = ['pencil', 'brush', 'eraser'].includes(this.app.tool.id) && !this.resizing;
+    this.finish(stroke.last, Boolean(this.resizing));
+    if (undo && this.app.doc.revision !== stroke.revision) this.app.doc.discardLast();
+    // Keep receiving this finger's movement for the gesture.
+    try {
+      this.scroller.setPointerCapture(stroke.id);
+    } catch {
+      // Already lifted.
+    }
   }
 
   private updateStatus(p: PointerInfo): void {
@@ -562,6 +768,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): H
 function sizeCanvas(c: HTMLCanvasElement, w: number, h: number, dpr: number): void {
   c.style.width = `${w}px`;
   c.style.height = `${h}px`;
-  c.width = Math.max(1, Math.round(w * dpr));
-  c.height = Math.max(1, Math.round(h * dpr));
+  const pw = Math.max(1, Math.round(w * dpr));
+  const ph = Math.max(1, Math.round(h * dpr));
+  // Assigning the size clears the canvas even if it is the same: avoided while pinch-zooming.
+  if (c.width !== pw) c.width = pw;
+  if (c.height !== ph) c.height = ph;
 }

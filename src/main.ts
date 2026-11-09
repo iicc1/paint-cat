@@ -8,6 +8,14 @@ import './styles/workspace.css';
 import './styles/menus.css';
 import './styles/dialogs.css';
 
+// iOS zooms the page into a field whose text is under 16 px when it gets the focus (the text box) and does not
+// zoom back out. maximum-scale stops that; iOS still lets the user pinch-zoom the page.
+const ios =
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+if (ios && viewport) viewport.content += ', maximum-scale=1';
+
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
 root.classList.add('app');

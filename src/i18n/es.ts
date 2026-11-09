@@ -335,6 +335,7 @@ export const es = {
     print: 'Imprimir',
     wallpaper: 'Establecer como fondo de escritorio',
     moreOptions: (label: string) => `${label}: más opciones`,
+    back: 'Atrás',
   },
 
   status: {

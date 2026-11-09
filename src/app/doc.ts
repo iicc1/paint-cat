@@ -39,6 +39,8 @@ export class PaintDoc {
   private bctx: CanvasRenderingContext2D;
   private undoStack: Entry[] = [];
   private redoStack: Entry[] = [];
+  /** Grows with every undo step created (to tell whether an action created one). */
+  revision = 0;
   /** Called after any pixel or size change. */
   onChange: (sizeChanged: boolean) => void = () => {};
 
@@ -96,6 +98,13 @@ export class PaintDoc {
     this.onChange(true);
   }
 
+  /** Undoes the last step without keeping it for Redo (a stroke that turned out to be a touch gesture). */
+  discardLast(): void {
+    const e = this.undoStack.pop();
+    if (!e) return;
+    this.onChange(this.apply(e, 'before'));
+  }
+
   undo(): boolean {
     const e = this.undoStack.pop();
     if (!e) return false;
@@ -128,6 +137,7 @@ export class PaintDoc {
   }
 
   private push(e: Entry): void {
+    this.revision++;
     this.undoStack.push(e);
     if (this.undoStack.length > UNDO_LIMIT) this.undoStack.shift();
     this.redoStack = [];

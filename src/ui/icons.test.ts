@@ -14,7 +14,7 @@ const EXPECTED_ICONS = [
   'brushBrush', 'brushCalligraphy1', 'brushCalligraphy2', 'brushAirbrush', 'brushOil', 'brushCrayon',
   'brushMarker', 'brushNaturalPencil', 'brushWatercolor',
   'outline', 'fillStyle', 'styleNone', 'styleSolid', 'styleCrayon', 'styleMarker', 'styleOil',
-  'styleNaturalPencil', 'styleWatercolor', 'sizeLines', 'editColors',
+  'styleNaturalPencil', 'styleWatercolor', 'sizeLines', 'shapes', 'editColors',
   'zoomIn', 'zoomOut', 'zoom100', 'fullscreen', 'thumbnail',
   'bold', 'italic', 'underline', 'strikethrough', 'opaque', 'transparent',
   'onePage', 'twoPages', 'prevPage', 'nextPage', 'closePreview',

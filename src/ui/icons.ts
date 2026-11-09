@@ -81,6 +81,7 @@ export const ICON_NAMES = [
   'styleNaturalPencil',
   'styleWatercolor',
   'sizeLines',
+  'shapes',
   'editColors',
   // View tab
   'zoomIn',
@@ -863,6 +864,18 @@ const DEFS: Record<IconName, IconDef> = {
       SWATCH_FRAME +
       `<path d="M4 4.5C7 2.5 12 3.5 12.5 6.5C13 9 11.5 13 8 12.5C4.5 12 2 7 4 4.5Z" fill="${C.orange}" fill-opacity=".35" stroke="${C.orange}" stroke-opacity=".7"/>` +
       `<circle cx="7.5" cy="8" r="2.2" fill="${C.orange}" fill-opacity=".25"/>`,
+  },
+  // Collapsed Shapes group (narrow ribbon)
+  shapes: {
+    s:
+      `<circle cx="5" cy="5" r="3.5" fill="none" stroke="${C.blueD}"/>` +
+      `<rect x="8.5" y="2.5" width="6" height="5" fill="none" stroke="${C.blueD}"/>` +
+      `<path d="M1.5 14.5L5 9L8.5 14.5ZM10.5 9.5L14.5 12L10.5 14.5Z" fill="none" stroke="${C.blueD}" stroke-linejoin="round"/>`,
+    l:
+      `<circle cx="10" cy="10" r="7" fill="${C.blueP}" stroke="${C.blueD}" stroke-width="1.2"/>` +
+      `<rect x="17.5" y="4.5" width="12" height="11" fill="${C.blueP}" stroke="${C.blueD}" stroke-width="1.2"/>` +
+      `<path d="M3 28.5L10 18L17 28.5Z" fill="${C.blueP}" stroke="${C.blueD}" stroke-width="1.2" stroke-linejoin="round"/>` +
+      `<path d="M20.5 19.5L29.5 24L20.5 28.5Z" fill="${C.blueP}" stroke="${C.blueD}" stroke-width="1.2" stroke-linejoin="round"/>`,
   },
   sizeLines: {
     s:

@@ -54,6 +54,10 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
   const keys: { key: string | null; el: HTMLElement; run: () => void; sub?: string }[] = [];
   let openSub: string | null = null;
   let hoverTimer = 0;
+  // Hovering opens submenus with the mouse. Not with a finger, nor when the submenu would replace the
+  // list (narrow screen): there only a click on the arrow opens it.
+  const narrow = window.matchMedia('(max-width: 600px)');
+  const hovers = (e: PointerEvent): boolean => e.pointerType === 'mouse' && !narrow.matches;
 
   const run = (id: string): void => {
     const c = commands[id];
@@ -64,7 +68,9 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
 
   const showRecent = (): void => {
     openSub = null;
+    popup.el.classList.remove('is-sub');
     left.querySelectorAll('.is-sub-open').forEach((e) => e.classList.remove('is-sub-open'));
+    right.classList.toggle('is-empty', !app.store.state.recent.length);
     right.replaceChildren(h('div.filemenu-right-title', {}, t.fileMenu.recent));
     app.store.state.recent.forEach((r, i) => {
       const key = String(i + 1);
@@ -84,7 +90,15 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
     const sub = SUBMENUS[id];
     left.querySelectorAll('.is-sub-open').forEach((e) => e.classList.remove('is-sub-open'));
     left.querySelector(`[data-cmd="${id}"]`)?.classList.add('is-sub-open');
-    right.replaceChildren(h('div.filemenu-right-title', {}, sub.title()));
+    // On a narrow screen the submenu takes the place of the list: Back returns to it.
+    popup.el.classList.add('is-sub');
+    right.classList.remove('is-empty');
+    const back = h(
+      'button.filemenu-back',
+      { type: 'button', 'aria-label': t.fileMenu.back, title: t.fileMenu.back, onclick: showRecent },
+      svg(icon('submenu', 16)),
+    );
+    right.replaceChildren(h('div.filemenu-right-title', {}, back, sub.title()));
     for (const sid of sub.items) {
       const c = commands[sid];
       const enabled = c.enabled?.() ?? true;
@@ -126,8 +140,9 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
       svg(icon(c.icon ?? 'app', 32)),
       h('span.filemenu-label', {}, node),
     );
-    main.addEventListener('pointerenter', () => {
+    main.addEventListener('pointerenter', (e) => {
       window.clearTimeout(hoverTimer);
+      if (!hovers(e)) return;
       if (hasSub && enabled) hoverTimer = window.setTimeout(() => showSub(id), 400);
       else hoverTimer = window.setTimeout(showRecent, 400);
     });
@@ -142,9 +157,9 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
         },
         svg(icon('submenu', 16)),
       );
-      arrow.addEventListener('pointerenter', () => {
+      arrow.addEventListener('pointerenter', (e) => {
         window.clearTimeout(hoverTimer);
-        if (enabled) showSub(id);
+        if (enabled && hovers(e)) showSub(id);
       });
       left.append(h('div.filemenu-split', { 'data-cmd': id }, main, arrow));
     } else {
@@ -192,5 +207,6 @@ export function openFileMenu(app: App, commands: Commands, files: FileManager, o
   const r = owner.getBoundingClientRect();
   popup.el.style.left = `${r.left}px`;
   popup.el.style.top = `${r.top}px`;
+  popup.el.style.maxHeight = `${window.innerHeight - r.top - 2}px`;
   popup.el.focus();
 }
